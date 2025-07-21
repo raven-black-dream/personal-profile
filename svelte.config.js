@@ -13,6 +13,7 @@ const config = {
 		routes: {
 			include: ['/*'],
 			exclude: ['<all>']
+		}
 	}) , alias: {
 		"@/*": "./path/to/lib/*",
 	  }
