@@ -1,0 +1,5 @@
+I’ve always been driven by two things: understanding how things work and building better systems. This led me straight to a career as a Full Stack Data Scientist, where I get to do both every single day. For me, data isn't just numbers; it's the raw material for building tools, discovering insights, and making more informed decisions.
+
+In my role with the BC Public Service, I have the privilege of applying this mindset to challenges that matter. My work involves constructing end-to-end data solutions—from the foundational engineering to the machine learning models and final interactive dashboards—all with the goal of creating better outcomes for the public.
+
+When I’m not at the keyboard, I’m usually satisfying my curiosity in other ways. I'm a firm believer that the best ideas come from a broad range of experiences, whether that's exploring the history and culture of the medieval period, training for a new fitness goal, or getting my hands dirty with a personal project in my home lab. I’m always exploring, always learning, and always looking for the next interesting problem to solve.
