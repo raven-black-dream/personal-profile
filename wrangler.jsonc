@@ -1,0 +1,12 @@
+{
+	"name": "personal-profile",
+	"account_id": "36f3627e5eca663b7242f0845b654a89",
+	"main": "./.cloudflare/worker.js",
+	"site": {
+		"bucket": "./.cloudflare/public"
+	},
+	"build": {
+		"command": "npm run build"
+	},
+	"compatibility_date": "2025-07-21"
+}
