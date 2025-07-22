@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
+	import { FileText } from '@lucide/svelte';
 </script>
 
 <section class="hero-section min-h-screen flex flex-col justify-center items-center text-center p-4">
@@ -14,8 +15,11 @@
 			A curious mind passionate about solving complex puzzles with data.
 		</p>
 		<div class="flex justify-center gap-4 pt-4">
-			<Button size="lg">View My Work</Button>
-			<Button variant="secondary" size="lg">Download Resume</Button>
+			<Button size="lg" href="#projects">View My Work</Button>
+			<Button variant="outline" size="lg" href="/evan_harley_resume.pdf" download>
+				<FileText class="mr-2 h-5 w-5" />
+				Download Resume
+			</Button>
 		</div>
 	</div>
 </section>

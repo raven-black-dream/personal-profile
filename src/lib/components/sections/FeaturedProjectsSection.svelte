@@ -25,7 +25,7 @@
 	];
 </script>
 
-<section class="py-16 md:py-24 bg-background/50">
+<section id="projects" class="py-16 md:py-24 bg-background/50">
 	<div class="container mx-auto px-4">
 		<h2 class="text-3xl md:text-4xl font-bold tracking-tight text-center mb-12">Featured Projects</h2>
 		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
