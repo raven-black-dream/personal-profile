@@ -4,13 +4,13 @@
 			<div class="space-y-4">
 				<h2 class="text-3xl md:text-4xl font-bold tracking-tight">About Me</h2>
 				<p class="text-muted-foreground text-lg">
-					I’ve always been driven by two things: understanding how things work and building better systems. This led me straight to a career as a Full Stack Data Scientist, where I get to do both every single day. For me, data isn't just numbers; it's the raw material for building tools, discovering insights, and making more informed decisions.
+					Over 10 years in data science, I’ve worked across the full analytics lifecycle — pipeline architecture, data engineering, predictive modelling, NLP, computer vision, and ML/AI strategy. I’m equally comfortable presenting an AI roadmap to a Deputy Minister and writing the production pipeline that underpins it.
 				</p>
 				<p class="text-muted-foreground text-lg">
-					In my role with the BC Public Service, I have the privilege of applying this mindset to challenges that matter. My work involves constructing end-to-end data solutions—from the foundational engineering to the machine learning models and final interactive dashboards—all with the goal of creating better outcomes for the public.
+					In the BC Public Service I’ve applied this breadth to high-stakes domains: designing a ministry-wide Data Lakehouse, authoring the AI Adoption Strategy, applying survivorship analysis and event-duration prediction to provincial roadway incident data, and advising senior leadership on agentic AI use cases. The work is meaningful, the problems are genuinely hard, and the scale is real.
 				</p>
 				<p class="text-muted-foreground text-lg">
-					When I’m not at the keyboard, I’m usually satisfying my curiosity in other ways. I'm a firm believer that the best ideas come from a broad range of experiences, whether that's exploring the history and culture of the medieval period, training for a new fitness goal, or getting my hands dirty with a personal project in my home lab. I’m always exploring, always learning, and always looking for the next interesting problem to solve.
+					Outside the office I’m usually satisfying curiosity in other directions — training in classical Japanese martial arts, running a homelab Kubernetes cluster, or diving into medieval history. I’m a firm believer that the best ideas come from a broad range of experiences, and I’m always looking for the next interesting problem to solve.
 				</p>
 			</div>
 			<div class="w-full max-w-sm mx-auto">

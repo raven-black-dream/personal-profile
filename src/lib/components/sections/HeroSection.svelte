@@ -9,10 +9,10 @@
 			Evan Harley
 		</h1>
 		<p class="text-lg md:text-xl text-muted-foreground">
-			Full Stack Data Scientist | Building with clarity and purpose.
+			Full Stack Data Scientist | ML/AI Strategy | Data Engineering
 		</p>
 		<p class="text-md md:text-lg text-muted-foreground pt-4">
-			A curious mind passionate about solving complex puzzles with data.
+			10+ years building end-to-end data solutions — from lakehouse architecture and production pipelines to predictive models and AI adoption strategy.
 		</p>
 		<div class="flex justify-center gap-4 pt-4">
 			<Button size="lg" href="#projects">View My Work</Button>

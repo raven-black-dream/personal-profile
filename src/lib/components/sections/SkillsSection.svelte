@@ -4,31 +4,31 @@
 
 	const skillCategories = [
 		{
-			title: 'Programming & Databases',
+			title: 'Languages & Databases',
 			subCategories: [
-				{ title: 'Languages', skills: ['Python', 'R', 'SQL', 'JavaScript'] },
-				{ title: 'Databases', skills: ['PostgreSQL', 'SQL Server', 'Oracle', 'MongoDB', 'DuckDB', 'Vector Stores', 'Time-series Databases'] }
+				{ title: 'Languages', skills: ['Python (10+ yrs)', 'R (10+ yrs)', 'SQL', 'TypeScript / JavaScript', 'C#', 'C++', 'Dart / Flutter'] },
+				{ title: 'Databases', skills: ['PostgreSQL', 'SQL Server', 'MongoDB', 'DuckDB'] }
 			]
 		},
 		{
-			title: 'Data Science & Machine Learning',
+			title: 'ML / AI',
 			subCategories: [
-				{ title: 'Core Libraries', skills: ['Pandas', 'NumPy', 'Scikit-learn', 'TensorFlow'] },
-				{ title: 'Specializations', skills: ['Natural Language Processing (NLP)', 'Computer Vision (CV)', 'Time-Series Forecasting', 'Anomaly Detection'] }
+				{ title: 'Methods', skills: ['Supervised & Unsupervised Learning', 'NLP', 'Computer Vision', 'Time Series Forecasting', 'Survival Analysis'] },
+				{ title: 'Modern AI', skills: ['LLMs', 'Agentic AI', 'RAG', 'Fine-Tuning'] }
 			]
 		},
 		{
-			title: 'Web, Deployment & MLOps',
+			title: 'Data Engineering & MLOps',
 			subCategories: [
-				{ title: 'Frameworks', skills: ['Svelte', 'Streamlit'] },
-				{ title: 'Deployment & CI/CD', skills: ['Docker', 'Kubernetes', 'GitHub Actions', 'APIs'] }
+				{ title: 'Engineering', skills: ['Data Lakehouse Architecture', 'Pipeline Design', 'ETL / ELT', 'DuckDB / MotherDuck', 'Estuary Flow'] },
+				{ title: 'Deployment', skills: ['Docker', 'Kubernetes', 'Svelte', 'Streamlit', 'GitHub Actions'] }
 			]
 		},
 		{
-			title: 'Visualization & Reporting',
+			title: 'BI, Visualization & Strategy',
 			subCategories: [
-				{ title: 'BI Tools', skills: ['Power BI'] },
-				{ title: 'Libraries', skills: ['Plotly', 'Matplotlib'] }
+				{ title: 'BI & Visualization', skills: ['Power BI', 'Tableau', 'Plotly', 'Matplotlib', 'ggplot2'] },
+				{ title: 'Strategy & Leadership', skills: ['AI Adoption Strategy', 'Data Strategy', 'Executive Communication', 'Working Group Leadership'] }
 			]
 		}
 	];
