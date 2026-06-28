@@ -35,7 +35,7 @@
 			Featured Projects
 		</h2>
 		<div class="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
-			{#each projects as project}
+			{#each projects as project (project.title)}
 				<Card.Root
 					class="flex flex-col transition-colors duration-300 hover:border-primary/60"
 				>
@@ -44,7 +44,7 @@
 						<Card.Description>{project.description}</Card.Description>
 					</Card.Header>
 					<Card.Content class="flex flex-wrap gap-2">
-						{#each project.tags as tag}
+						{#each project.tags as tag (tag)}
 							<Badge variant="secondary">{tag}</Badge>
 						{/each}
 					</Card.Content>
