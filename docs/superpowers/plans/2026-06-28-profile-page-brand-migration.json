@@ -1,0 +1,97 @@
+{
+	"feature_slug": "profile-page-brand-migration",
+	"feature_title": "Profile Page Brand Migration",
+	"branch_name": "claude/feature/profile-page-brand-migration",
+	"spec_path": "docs/superpowers/specs/2026-06-28-profile-page-brand-migration-design.md",
+	"plan_path": "docs/superpowers/plans/2026-06-28-profile-page-brand-migration.md",
+	"test_cmd": "npm run check && npm run lint && npm run build",
+	"tasks": [
+		{
+			"id": 1,
+			"description": "Foundational token remap in src/app.css: swap the Lora @import for the IBM Plex superfamily, remap the :root (light) and .dark (dark) shadcn token blocks onto the Evan Harley Design System (Deep Emerald accent, warm-charcoal/warm-paper neutrals, chart + sidebar tokens), set --radius to 0.5rem for restrained radii, set body to IBM Plex Sans, and add font-sans/serif/mono tokens to @theme inline. Propagates to all components via existing semantic utilities.",
+			"files_to_touch": ["src/app.css"]
+		},
+		{
+			"id": 2,
+			"description": "Make dark the default theme by setting <ModeWatcher defaultMode=\"dark\" /> in the layout (after verifying the prop name against the installed mode-watcher types). Toggle and persistence remain unchanged.",
+			"files_to_touch": ["src/routes/+layout.svelte"]
+		},
+		{
+			"id": 3,
+			"description": "Per-section brand audit: grep components for token-bypassing literals (Lora, raw hex, rose/pink, font-serif/mono, non-token radii), confirm everything resolves to the remapped tokens, verify/soften the HeroSection radial-gradient so it reads as a single soft emerald glow, and confirm the ui/ primitives (button, card, badge) carry no hardcoded brand values (touch only if a finding requires it).",
+			"files_to_touch": [
+				"src/lib/components/sections/HeroSection.svelte",
+				"src/lib/components/layout/Header.svelte",
+				"src/lib/components/custom/DarkModeToggle.svelte",
+				"src/lib/components/sections/AboutMeSection.svelte",
+				"src/lib/components/sections/SkillsSection.svelte",
+				"src/lib/components/sections/FeaturedProjectsSection.svelte",
+				"src/lib/components/sections/ContactSection.svelte",
+				"src/lib/components/ui/button/button.svelte",
+				"src/lib/components/ui/card/card.svelte",
+				"src/lib/components/ui/badge/badge.svelte"
+			]
+		},
+		{
+			"id": 4,
+			"description": "Browser verification pass with the dogfood skill (agent-browser) against the design-system reference: verify fonts, accent, neutrals, and radii in both the dark (default) and light themes, confirm the toggle persists and dark is the first-load default, watch for layout/contrast/reduced-motion regressions, and record findings. Fix any defects at the source token/component and re-run the static gate.",
+			"files_to_touch": ["src/app.css", "src/lib/components/sections/HeroSection.svelte"]
+		}
+	],
+	"test_cases": [
+		{
+			"id": "TC-1",
+			"maps_to_criterion": "AC1 — Lora removed; IBM Plex imported; body renders IBM Plex Sans",
+			"description": "In-browser computed body font-family resolves to IBM Plex Sans and no Lora @import or usage remains anywhere.",
+			"type": "e2e"
+		},
+		{
+			"id": "TC-2",
+			"maps_to_criterion": "AC2 — accent is Deep Emerald, no rose remains",
+			"description": "Buttons, focus ring, links, and hero glow render Deep Emerald #1FA37A on dark / #157A57 on light; no rose/pink anywhere.",
+			"type": "e2e"
+		},
+		{
+			"id": "TC-3",
+			"maps_to_criterion": "AC3 — warm-charcoal / warm-paper neutrals",
+			"description": "Dark background is warm charcoal #0E0F11 (not pure black/zinc) with warm off-white #F5F3EF text; light uses warm paper #FAF8F4.",
+			"type": "e2e"
+		},
+		{
+			"id": "TC-4",
+			"maps_to_criterion": "AC4 — restrained radii",
+			"description": "Controls render ~5-6px radius and cards 12px; nothing is sharp-0 or pill-round for cards.",
+			"type": "e2e"
+		},
+		{
+			"id": "TC-5",
+			"maps_to_criterion": "AC5 — dark default + working, persistent light toggle",
+			"description": "First load is dark even on a light-mode OS; toggling switches to a brand-aligned light theme and the choice persists across reload.",
+			"type": "e2e"
+		},
+		{
+			"id": "TC-6",
+			"maps_to_criterion": "AC6 — no token-bypassing literals in any component",
+			"description": "Grep across components/routes finds no Lora, raw brand hex, rose/pink, or non-token radii that conflict with the design system.",
+			"type": "integration"
+		},
+		{
+			"id": "TC-7",
+			"maps_to_criterion": "AC7 — visual conformance recorded",
+			"description": "A dogfood/agent-browser pass confirms accent, fonts, neutrals, and radii visually match the design-system reference in both themes, with findings recorded.",
+			"type": "e2e"
+		},
+		{
+			"id": "TC-8",
+			"maps_to_criterion": "AC8/AC9 — static quality gates pass",
+			"description": "npm run check (svelte-check), npm run lint (prettier + eslint), and npm run build all succeed.",
+			"type": "integration"
+		}
+	],
+	"security_concerns": [
+		"Pure front-end styling change: no auth, no user data, no endpoints, no new data flows; BOLA/IDOR not applicable.",
+		"Only external surface is the Google Fonts CDN @import, identical trust profile to the existing Lora import; no secrets, server code, or injection surface introduced.",
+		"Expected security rating: PASS."
+	],
+	"estimated_complexity": "small"
+}

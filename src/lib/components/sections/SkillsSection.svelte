@@ -38,17 +38,17 @@
 	<div class="container mx-auto px-4">
 		<h2 class="text-3xl md:text-4xl font-bold tracking-tight text-center mb-12">Skills & Technologies</h2>
 		<div class="grid md:grid-cols-2 gap-8">
-			{#each skillCategories as category}
+			{#each skillCategories as category (category.title)}
 				<Card.Root>
 					<Card.Header>
 						<Card.Title>{category.title}</Card.Title>
 					</Card.Header>
 					<Card.Content class="flex flex-col gap-4">
-						{#each category.subCategories as subCategory}
+						{#each category.subCategories as subCategory (subCategory.title)}
 							<div>
 								<h4 class="font-semibold mb-2 text-sm text-muted-foreground">{subCategory.title}</h4>
 								<div class="flex flex-wrap gap-2">
-									{#each subCategory.skills as skill}
+									{#each subCategory.skills as skill (skill)}
 										<Badge variant="secondary">{skill}</Badge>
 									{/each}
 								</div>
