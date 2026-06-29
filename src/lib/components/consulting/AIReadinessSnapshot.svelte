@@ -2,6 +2,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { INTENT_QUESTION, type Branch } from '$lib/consulting/snapshot-content';
 	import { questionsForBranch, scoreSnapshot, type Answers } from '$lib/consulting/scoring';
+	import { postSnapshot } from '$lib/consulting/snapshot-client';
 
 	interface Props {
 		open: boolean;
@@ -15,6 +16,7 @@
 	let step = $state(0);
 	let branch = $state<Branch | null>(null);
 	let answers = $state<Answers>({});
+	let logged = $state(false);
 
 	const questions = $derived(branch ? questionsForBranch(branch) : []);
 	const onResult = $derived(branch != null && step > questions.length);
@@ -23,10 +25,18 @@
 		branch ? Math.min(100, Math.round((step / (questions.length + 1)) * 100)) : 0
 	);
 
+	$effect(() => {
+		if (result && branch && !logged) {
+			logged = true;
+			postSnapshot(branch, answers);
+		}
+	});
+
 	function reset() {
 		step = 0;
 		branch = null;
 		answers = {};
+		logged = false;
 	}
 
 	// Reset the wizard whenever the dialog closes (Esc, overlay, or close button).
@@ -146,6 +156,9 @@
 				<p class="text-xs text-muted-foreground">
 					This snapshot is a guide, not a verdict — it’s scored with simple rules, not AI. A short
 					conversation gets you a sharper read.
+				</p>
+				<p class="text-xs text-muted-foreground">
+					Anonymous answers are kept to improve this tool — no names, no emails.
 				</p>
 			</div>
 		{/if}
