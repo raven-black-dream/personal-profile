@@ -10,7 +10,7 @@
 		{
 			"binding": "DB",
 			"database_name": "professional-portfolio-snapshots",
-			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
+			"database_id": "36a12c25-3559-4f65-ba80-00c3f9023fd4",
 			"migrations_dir": "migrations"
 		}
 	]
