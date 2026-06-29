@@ -2,17 +2,16 @@
 
 Snapshot responses are retained for 24 months, then deleted.
 
-## Primary: Cloudflare Cron Trigger
+## v1 mechanism: manual / recurring wrangler prune
 
-`wrangler.jsonc` declares `triggers.crons: ["0 3 1 * *"]` (monthly, 03:00 UTC, 1st).
-A `scheduled()` handler can call `pruneOldSnapshots(env.DB, Date.now())` from
-`src/lib/server/snapshot-log.ts` once the SvelteKit Cloudflare adapter exposes a
-scheduled entry point.
+> **Why manual, not a cron:** `@sveltejs/adapter-cloudflare` emits only a fetch
+> handler, so a Cloudflare cron trigger has no `scheduled()` entry point to invoke —
+> a declared cron would silently no-op. The cron is therefore intentionally **not**
+> configured in `wrangler.jsonc`. Retention runs manually until automation is wired
+> (see "Automating later" below).
 
-## Fallback: manual / recurring wrangler prune (v1)
-
-Until the scheduled handler is wired, run this monthly. Compute the 24-month
-cutoff and execute the bound DELETE against the production D1:
+Run this monthly. Compute the 24-month cutoff and execute the bound DELETE against
+the production D1:
 
 ```bash
 # Cutoff = now minus 24 calendar months, in epoch ms.
@@ -24,6 +23,14 @@ wrangler d1 execute professional-portfolio-snapshots --remote \
 
 Use `--local` against the local dev D1 for rehearsal. Never run a destructive
 command against production without confirming the binding name and cutoff first.
+
+## Automating later (deferred)
+
+To make retention automatic, add a `scheduled()` Worker entry point that calls
+`pruneOldSnapshots(env.DB, Date.now())` from `src/lib/server/snapshot-log.ts`, then
+declare the cron in `wrangler.jsonc` (`"triggers": { "crons": ["0 3 1 * *"] }`). This
+needs a custom Worker entry that coexists with the SvelteKit adapter's generated
+`_worker.js` — out of scope for v1, tracked as a follow-up.
 
 ## Abuse / rate-limiting
 

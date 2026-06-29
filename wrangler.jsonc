@@ -13,8 +13,8 @@
 			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
 			"migrations_dir": "migrations"
 		}
-	],
-	"triggers": {
-		"crons": ["0 3 1 * *"]
-	}
+	]
+	// No cron trigger: @sveltejs/adapter-cloudflare emits only a fetch handler, so a
+	// declared cron would fire into the void (no scheduled() entry point). Retention
+	// runs via the documented manual prune — see docs/runbooks/snapshot-prune.md.
 }

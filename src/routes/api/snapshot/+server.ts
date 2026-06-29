@@ -10,12 +10,20 @@ import {
 
 /** Generous cap for a 12-question answer map; rejects abusive bodies. */
 const MAX_BODY_BYTES = 4096;
+const encoder = new TextEncoder();
 
 const noContent = () => new Response(null, { status: 204 });
 
 export const POST: RequestHandler = async ({ request, platform }) => {
+	// Reject oversized bodies BEFORE buffering, when Content-Length is declared.
+	const declaredLen = Number(request.headers.get('content-length'));
+	if (Number.isFinite(declaredLen) && declaredLen > MAX_BODY_BYTES) {
+		return json({ error: 'payload too large' }, { status: 413 });
+	}
+
 	const raw = await request.text();
-	if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) {
+	// Defense in depth: Content-Length may be absent or wrong — check actual bytes too.
+	if (encoder.encode(raw).length > MAX_BODY_BYTES) {
 		return json({ error: 'payload too large' }, { status: 413 });
 	}
 

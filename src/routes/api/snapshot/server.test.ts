@@ -69,6 +69,14 @@ describe('POST /api/snapshot', () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	it('rejects via a declared Content-Length over the cap, before reading the body', async () => {
+		const { db, calls } = fakeD1();
+		const small = JSON.stringify({ branch: 'llm', answers: completeAnswers('llm') });
+		const res = await POST(event(small, { env: { DB: db } }, { 'content-length': '999999' }));
+		expect(res.status).toBe(413);
+		expect(calls).toHaveLength(0);
+	});
+
 	it('no-ops gracefully (204) when the DB binding is absent', async () => {
 		const body = JSON.stringify({ branch: 'llm', answers: completeAnswers('llm') });
 		const res = await POST(event(body, { env: {} }));
