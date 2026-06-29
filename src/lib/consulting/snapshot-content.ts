@@ -21,6 +21,13 @@
 
 export type Branch = 'llm' | 'ml' | 'both';
 
+/**
+ * Rubric version stamped on every logged snapshot response, so calibration can
+ * segment answer distributions by rubric. Bump this whenever QUESTIONS,
+ * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results.
+ */
+export const RUBRIC_VERSION = 'v0.2';
+
 export interface Option {
 	label: string;
 	/** 1–4 readiness score (halves allowed), or omitted for a gate / pure-router option. */
