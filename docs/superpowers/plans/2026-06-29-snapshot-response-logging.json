@@ -1,0 +1,176 @@
+{
+  "feature_slug": "snapshot-response-logging",
+  "feature_title": "Snapshot Response Logging",
+  "branch_name": "claude/feature/consulting-page-snapshot",
+  "spec_path": "docs/superpowers/specs/2026-06-29-snapshot-response-logging-design.md",
+  "plan_path": "docs/superpowers/plans/2026-06-29-snapshot-response-logging.md",
+  "test_cmd": "npx vitest run",
+  "tasks": [
+    {
+      "id": 1,
+      "description": "Stand up the vitest test runner (no test runner exists today): add vitest + jsdom + @testing-library/svelte deps, a dedicated vitest.config.ts ($lib alias, jsdom env, svelteTesting plugin), a jsdom setup file with bits-ui/floating-ui stubs, and a `test` npm script; verify with a throwaway smoke test.",
+      "files_to_touch": [
+        "vitest.config.ts",
+        "vitest-setup.ts",
+        "package.json",
+        "src/lib/server/smoke.test.ts"
+      ]
+    },
+    {
+      "id": 2,
+      "description": "Add the RUBRIC_VERSION constant (value \"v0.2\") to snapshot-content.ts, stamped on every logged row so calibration can segment by rubric version.",
+      "files_to_touch": [
+        "src/lib/consulting/snapshot-content.ts",
+        "src/lib/consulting/snapshot-content.test.ts"
+      ]
+    },
+    {
+      "id": 3,
+      "description": "Implement pure server helpers in snapshot-log.ts: validateSnapshotPayload (validates {branch,answers} against the current rubric — unknown branch/question, out-of-range/non-integer index, incomplete set all rejected), deriveDeviceClass (coarse mobile/desktop from UA, UA discarded), deriveSource (coarse deeplink/organic from Referer), and snapshotPruneCutoff (24 calendar-month epoch-ms boundary).",
+      "files_to_touch": [
+        "src/lib/server/snapshot-log.ts",
+        "src/lib/server/snapshot-log.test.ts"
+      ]
+    },
+    {
+      "id": 4,
+      "description": "Add the row builder and D1 operations to snapshot-log.ts: buildSnapshotRow (re-runs scoreSnapshot server-side, stamps uuid + RUBRIC_VERSION + created_at), insertSnapshot (bound-parameter INSERT of all 12 columns), and pruneOldSnapshots (bound DELETE at the 24-month cutoff). Tested with a hand-rolled D1 mock, never a real binding.",
+      "files_to_touch": [
+        "src/lib/server/snapshot-log.ts",
+        "src/lib/server/snapshot-log-db.test.ts"
+      ]
+    },
+    {
+      "id": 5,
+      "description": "Wire the D1 binding: add d1_databases (binding DB) to wrangler.jsonc, add @cloudflare/workers-types, and type App.Platform.env.DB as D1Database in app.d.ts.",
+      "files_to_touch": [
+        "wrangler.jsonc",
+        "src/app.d.ts",
+        "package.json"
+      ]
+    },
+    {
+      "id": 6,
+      "description": "Create the D1 migration: snapshot_responses table (all 12 columns matching the INSERT, nullable gate/cap_reason) plus a created_at index for the prune scan. Verified by a SQL-shape test (no live DB).",
+      "files_to_touch": [
+        "migrations/0001_snapshot_responses.sql",
+        "src/lib/server/migration.test.ts"
+      ]
+    },
+    {
+      "id": 7,
+      "description": "Implement the POST /api/snapshot +server.ts endpoint orchestrating: body-size cap (413), JSON parse + payload validation (400, no write), graceful 204 no-op when DB binding absent, server-side device_class/source derivation from headers, server recompute + bound INSERT, and swallow-on-D1-error (204, never throws to client). Integration-tested with a mocked D1.",
+      "files_to_touch": [
+        "src/routes/api/snapshot/+server.ts",
+        "src/routes/api/snapshot/server.test.ts"
+      ]
+    },
+    {
+      "id": 8,
+      "description": "Add the client-safe postSnapshot helper: fire-and-forget POST of {branch,answers} to /api/snapshot, never awaited, swallows sync throws and rejected promises. Unit-tested with an injected fetch mock.",
+      "files_to_touch": [
+        "src/lib/consulting/snapshot-client.ts",
+        "src/lib/consulting/snapshot-client.test.ts"
+      ]
+    },
+    {
+      "id": 9,
+      "description": "Wire the wizard component: a once-guarded $effect that calls postSnapshot when result first becomes non-null, a `logged` flag cleared in reset() so Start-over re-completion logs again, and the verbatim transparency line in the result block. Component-tested (one POST, line present) via @testing-library/svelte; validated with the Svelte MCP autofixer.",
+      "files_to_touch": [
+        "src/lib/components/consulting/AIReadinessSnapshot.svelte",
+        "src/lib/components/consulting/AIReadinessSnapshot.test.ts"
+      ]
+    },
+    {
+      "id": 10,
+      "description": "Wire the 24-month retention prune: add triggers.crons to wrangler.jsonc, a standalone prune.sql, and an operator runbook documenting the primary Cron Trigger path plus the spec-blessed recurring `wrangler d1 execute` fallback (adapter-cloudflare cannot cleanly host a scheduled handler).",
+      "files_to_touch": [
+        "wrangler.jsonc",
+        "migrations/prune.sql",
+        "docs/runbooks/snapshot-prune.md"
+      ]
+    }
+  ],
+  "test_cases": [
+    {
+      "id": "TC-1",
+      "maps_to_criterion": "AC1",
+      "description": "Valid payload to POST /api/snapshot inserts exactly one row (204) with all listed fields populated.",
+      "type": "integration"
+    },
+    {
+      "id": "TC-2",
+      "maps_to_criterion": "AC2",
+      "description": "buildSnapshotRow stores overall/band_id/gate/cap_reason/dimensions_json equal to scoreSnapshot(branch, answers) computed server-side, not client-supplied.",
+      "type": "unit"
+    },
+    {
+      "id": "TC-3",
+      "maps_to_criterion": "AC3",
+      "description": "Malformed JSON, invalid branch, unknown question id, out-of-range/non-integer index, and incomplete answer set each return 4xx and write no row.",
+      "type": "integration"
+    },
+    {
+      "id": "TC-4",
+      "maps_to_criterion": "AC4",
+      "description": "When the D1 binding is absent the endpoint no-ops (204); when D1 throws it degrades gracefully (204, no throw) so the result screen still renders.",
+      "type": "integration"
+    },
+    {
+      "id": "TC-5",
+      "maps_to_criterion": "AC5",
+      "description": "The transparency line 'Anonymous answers are kept to improve this tool — no names, no emails.' renders on the result screen.",
+      "type": "e2e"
+    },
+    {
+      "id": "TC-6",
+      "maps_to_criterion": "AC6",
+      "description": "Only coarse device_class (mobile/desktop) and source (deeplink/organic) are derived and stored; raw UA/Referer/IP are never persisted (derivation unit tests + schema column set).",
+      "type": "unit"
+    },
+    {
+      "id": "TC-7",
+      "maps_to_criterion": "AC7",
+      "description": "postSnapshot fires the request without awaiting and swallows both synchronous throws and rejected promises.",
+      "type": "unit"
+    },
+    {
+      "id": "TC-8",
+      "maps_to_criterion": "AC8",
+      "description": "snapshotPruneCutoff yields the epoch-ms 24 calendar months before now and pruneOldSnapshots issues a single bound DELETE at that cutoff, returning the rows removed (older pruned, newer kept).",
+      "type": "unit"
+    },
+    {
+      "id": "TC-9",
+      "maps_to_criterion": "AC9",
+      "description": "Completing the wizard fires the POST exactly once (the logged once-guard holds across reactive re-runs).",
+      "type": "e2e"
+    },
+    {
+      "id": "TC-10",
+      "maps_to_criterion": "Security: SQL injection",
+      "description": "insertSnapshot uses prepare().bind() with all 12 values bound (SQL string contains no interpolated values), proving no string-concatenated SQL.",
+      "type": "unit"
+    },
+    {
+      "id": "TC-11",
+      "maps_to_criterion": "Edge case: oversized body",
+      "description": "A request body exceeding MAX_BODY_BYTES (4096) is rejected with 413 and writes no row.",
+      "type": "integration"
+    },
+    {
+      "id": "TC-12",
+      "maps_to_criterion": "FR: schema",
+      "description": "The migration creates snapshot_responses with every stored column and a created_at index for the prune scan.",
+      "type": "unit"
+    }
+  ],
+  "security_concerns": [
+    "Public write-only ingestion endpoint enables anonymous data-poisoning (not theft); mitigated by strict shape/range validation + server recompute so no arbitrary values land, a body-size cap, and Cloudflare default rate/bot protection.",
+    "SQL injection: D1 prepared statements with bound parameters only on both INSERT and prune DELETE; never string-concatenate answers into SQL (hard requirement).",
+    "Privacy: never persist IP, full User-Agent, email, name, or fingerprint; device_class and source are coarse buckets derived at request time and otherwise discarded.",
+    "No read endpoint is created, so there is no BOLA/IDOR surface (no user-owned records to fetch); calibration reads happen out-of-band via wrangler/SQL.",
+    "Tests must run only against a mocked or local --local D1, never a real/prod binding (hard no-prod-test rule)."
+  ],
+  "estimated_complexity": "medium"
+}
