@@ -41,10 +41,17 @@ describe('validateSnapshotPayload', () => {
 		expect(validateSnapshotPayload({ branch: 'llm', answers }).ok).toBe(false);
 	});
 
-	it('rejects a non-integer / negative option index', () => {
+	it('rejects a negative option index', () => {
 		const answers = completeAnswers('llm');
 		const firstId = questionsForBranch('llm')[0].id;
 		answers[firstId] = -1;
+		expect(validateSnapshotPayload({ branch: 'llm', answers }).ok).toBe(false);
+	});
+
+	it('rejects a non-integer (float) option index', () => {
+		const answers = completeAnswers('llm');
+		const firstId = questionsForBranch('llm')[0].id;
+		answers[firstId] = 0.5; // exercises the Number.isInteger guard, not the < 0 guard
 		expect(validateSnapshotPayload({ branch: 'llm', answers }).ok).toBe(false);
 	});
 
@@ -84,10 +91,12 @@ describe('snapshotPruneCutoff', () => {
 		const cutoff = snapshotPruneCutoff(now);
 		expect(cutoff).toBe(Date.UTC(2024, 5, 29)); // 2024-06-29
 	});
-	it('a row one ms older than the cutoff is prunable; one ms newer is kept', () => {
+	it('returns a boundary strictly in the past, ~24 months back, honouring the months param', () => {
 		const now = Date.UTC(2026, 5, 29);
 		const cutoff = snapshotPruneCutoff(now);
-		expect(cutoff - 1 < cutoff).toBe(true);
-		expect(cutoff + 1 < cutoff).toBe(false);
+		expect(cutoff).toBeLessThan(now); // strictly in the past
+		expect(now - cutoff).toBeGreaterThan(700 * 86_400_000); // ~24mo is ≳ 700 days
+		expect(snapshotPruneCutoff(now, 0)).toBe(now); // 0 months = no shift
+		expect(snapshotPruneCutoff(now, 12)).toBe(Date.UTC(2025, 5, 29)); // 12 months back
 	});
 });
