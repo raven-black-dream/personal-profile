@@ -29,6 +29,7 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/svelte": "^5.4.2",
 		"@testing-library/user-event": "^14.6.1",
+		"@types/node": "^22.20.0",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"eslint": "^9.18.0",
