@@ -1,23 +1,39 @@
 /**
  * AI Readiness Snapshot — content & rubric.
  *
- * ⚠️ PLACEHOLDER CONTENT (v0, 2026-06-28). Drawn from
- * `Consultancy/brainstorms/ai-readiness-snapshot-content-DRAFT.md`.
- * Evan is refining the exact wording, scores, weights, band thresholds, and
- * the observation snippet bank. DO NOT treat these numbers/copy as final —
- * the structure is real; the content is a stand-in so the page can be built
- * and reviewed. The scoring engine (`scoring.ts`) reads everything from here,
- * so refining this file is all that's needed to finalise the tool.
+ * ⚠️ PLACEHOLDER CONTENT (v0.2, 2026-06-29). Wording/scores/thresholds are still
+ * Evan's to finalise. What changed in v0.2 (from the STORM validation pass — see
+ * `Consultancy/brainstorms/ai-readiness-rubric-validation-STORM.md`):
+ *   - Scaling fix: 3-option {1,2,4} items rescored to {1,2.5,4} so a "middle"
+ *     answer normalises to 50, not 33.
+ *   - Gate split: the LLM-deterministic gate now distinguishes "the AI must WRITE
+ *     the exact answer" (hard gate) from "a computer could look it up" (a fit —
+ *     LLM as the front door to a deterministic tool; teaching moment).
+ *   - Targeted non-compensatory floor (in scoring.ts): a critically-low use-case
+ *     fit, or a "real damage" risk answer, caps the band regardless of the average.
+ *   - New items: business-outcome/owner (uc4), data-privacy (gr2), RAG-vs-general
+ *     intent (rag1, which makes data-foundation weight intent-sensitive on LLM).
+ *   - tc2 de-double-barrelled (verification half only); uc3 → artifact form;
+ *     df2/ti1 de-collinearised and de-jargoned; df1 gains an example parenthetical.
+ * The scoring engine reads everything from here, so refining this file finalises
+ * the tool.
  */
 
 export type Branch = 'llm' | 'ml' | 'both';
 
 export interface Option {
 	label: string;
-	/** 1–4 readiness score, or omitted for a gate option. */
+	/** 1–4 readiness score (halves allowed), or omitted for a gate / pure-router option. */
 	score?: number;
 	/** If set, choosing this option hard-fails the snapshot on the given path. */
 	gate?: 'llm-deterministic' | 'ml-no-data';
+	/** A SNIPPETS key surfaced as an observation whenever this option is chosen,
+	 *  regardless of score (teaching moments, risk flags). */
+	insight?: string;
+	/** Override a dimension's branch weight for this run (intent-sensitive weighting). */
+	weightMod?: Partial<Record<DimensionId, number>>;
+	/** Triggers the targeted non-compensatory floor (see scoring.ts). */
+	cap?: 'real-damage' | 'cannot-verify';
 }
 
 export interface Question {
@@ -40,7 +56,8 @@ export type DimensionId =
 export interface Dimension {
 	id: DimensionId;
 	label: string;
-	/** Relative weight by branch (0 = not counted on that branch). */
+	/** Relative weight by branch (0 = not counted on that branch). May be overridden
+	 *  at runtime by an Option.weightMod. */
 	weight: Record<Branch, number>;
 }
 
@@ -63,7 +80,8 @@ export const INTENT_QUESTION = {
 };
 
 // PLACEHOLDER weights — Evan to calibrate. LLM leans on use-case + team;
-// ML leans on data foundation; "both" is a blend.
+// ML leans on data foundation; "both" is a blend. Data-foundation weight on the
+// LLM branch is the DEFAULT (general-knowledge use); rag1 raises it for RAG.
 export const DIMENSIONS: Dimension[] = [
 	{ id: 'use-case-fit', label: 'Use-case fit', weight: { llm: 3, ml: 2, both: 3 } },
 	{ id: 'team-capability', label: 'Team capability', weight: { llm: 3, ml: 1, both: 2 } },
@@ -78,11 +96,22 @@ export const QUESTIONS: Question[] = [
 		id: 'uc1',
 		dimension: 'use-case-fit',
 		prompt:
-			'For the task you have in mind, is there one exact answer that has to be right every single time — or a range of "good enough" answers a person can sanity-check?',
+			'For the task you have in mind, how exact does the answer have to be?',
 		branches: ['llm', 'both'],
 		options: [
-			{ label: 'One exact answer, must be right every time', gate: 'llm-deterministic' },
-			{ label: 'Mostly needs to be right, but a person reviews it', score: 2 },
+			{
+				// Hard gate: the model itself must author a verbatim-correct answer with no system behind it.
+				label: "The AI's own written answer has to be exactly right every time — there's no system behind it to look it up",
+				gate: 'llm-deterministic'
+			},
+			{
+				// The gate-split "fit" case: the exact answer is computed by a system; the LLM is the interface.
+				label:
+					'It needs an exact answer, but a computer system could look it up or calculate it (an order status, a price, a balance, a record)',
+				score: 4,
+				insight: 'insight:tool-front-door'
+			},
+			{ label: 'Mostly needs to be right, but a person reviews it', score: 2.5 },
 			{ label: 'A range of good-enough is fine', score: 4 }
 		]
 	},
@@ -100,11 +129,41 @@ export const QUESTIONS: Question[] = [
 	{
 		id: 'uc3',
 		dimension: 'use-case-fit',
-		prompt: "Could someone on your team reliably tell whether the AI's output is good?",
+		// Artifact form (was a self-appraisal): asks for an existing written definition,
+		// which resists over-rating better than "could someone tell?".
+		prompt: "Do you have a written, agreed definition of what a 'good' output looks like for this task?",
 		options: [
-			{ label: 'No / not sure', score: 1 },
-			{ label: 'Sometimes', score: 2 },
-			{ label: "Yes — we know what 'good' looks like", score: 4 }
+			{ label: 'No', score: 1, cap: 'cannot-verify' },
+			{ label: 'Roughly, but not written down', score: 2.5 },
+			{ label: 'Yes — written down and agreed', score: 4 }
+		]
+	},
+	{
+		id: 'uc4',
+		dimension: 'use-case-fit',
+		// Business-outcome / ownership — closes the strategy/value gap (RAND #1 failure).
+		prompt:
+			'Is there a named person who owns getting this done, and a business number it would move?',
+		options: [
+			{ label: 'No / not really', score: 1 },
+			{ label: 'One of those, not both', score: 2.5 },
+			{ label: 'Yes — a named owner and a number it would move', score: 4 }
+		]
+	},
+	{
+		id: 'rag1',
+		dimension: 'data-foundation',
+		// Pure weight-router (no score): makes data-foundation weight intent-sensitive on LLM/both.
+		// "Our own documents" = RAG, where corpus quality is load-bearing → raise the weight.
+		prompt:
+			'Does the AI need to work from your own documents and data to answer — or just general knowledge plus whatever someone pastes in each time?',
+		branches: ['llm', 'both'],
+		options: [
+			{ label: 'Just general knowledge + what we paste in' },
+			{
+				label: 'It needs to use our own documents / data',
+				weightMod: { 'data-foundation': 3 }
+			}
 		]
 	},
 	{
@@ -114,18 +173,18 @@ export const QUESTIONS: Question[] = [
 		options: [
 			{ label: 'None', score: 1 },
 			{ label: '1–2', score: 2 },
-			{ label: 'A handful', score: 3 },
+			{ label: 'About 3–5 (or roughly half)', score: 3 },
 			{ label: 'Most of them', score: 4 }
 		]
 	},
 	{
 		id: 'tc2',
 		dimension: 'team-capability',
-		prompt:
-			'When your team uses AI, can they usually get it to produce what they actually need — and catch it when it’s wrong?',
+		// De-double-barrelled: verification literacy only (the safety-relevant half).
+		prompt: 'When your team uses AI, can they reliably catch it when the output is wrong?',
 		options: [
 			{ label: 'Rarely', score: 1 },
-			{ label: 'Sometimes', score: 2 },
+			{ label: 'Sometimes', score: 2.5 },
 			{ label: 'Usually', score: 4 }
 		]
 	},
@@ -135,7 +194,7 @@ export const QUESTIONS: Question[] = [
 		prompt: 'Could your leadership name a task AI should NOT be trusted with?',
 		options: [
 			{ label: 'No', score: 1 },
-			{ label: 'Maybe, vaguely', score: 2 },
+			{ label: 'Maybe, vaguely', score: 2.5 },
 			{ label: 'Yes, clearly', score: 4 }
 		]
 	},
@@ -143,7 +202,7 @@ export const QUESTIONS: Question[] = [
 		id: 'df1',
 		dimension: 'data-foundation',
 		prompt:
-			'The thing you want AI to predict or flag — do you already have records of it actually happening, going back a while, that someone could export from a system?',
+			'The thing you want AI to predict or flag — do you already have records of it actually happening (e.g. past sales, orders, tickets, claims), going back a while, that someone could export from a system?',
 		branches: ['ml', 'both'],
 		options: [
 			{ label: 'No records of it / no real history', gate: 'ml-no-data' },
@@ -154,24 +213,26 @@ export const QUESTIONS: Question[] = [
 	{
 		id: 'df2',
 		dimension: 'data-foundation',
+		// Strictly WHERE data lives (storage state) — movability now lives only in ti1.
 		prompt: 'Where does that data mostly live?',
 		options: [
 			{ label: "On paper / in people's heads", score: 1 },
 			{ label: 'Scattered spreadsheets', score: 2 },
-			{ label: 'A few systems', score: 3 },
-			{ label: 'One clean system', score: 4 }
+			{ label: 'A few different systems', score: 3 },
+			{ label: 'One central system', score: 4 }
 		]
 	},
 	{
 		id: 'ti1',
 		dimension: 'tooling-infra',
+		// Strictly MOVABILITY (system-to-system), de-jargoned. No longer overlaps df2.
 		prompt:
-			'Can you get data in and out of your main systems easily (exports or integrations) — or is most of it locked in legacy tools, spreadsheets, or manual work?',
+			'When you need to move data between your systems, does it happen automatically — or does someone export and copy-paste it by hand?',
 		options: [
-			{ label: 'Locked in / manual', score: 1 },
-			{ label: 'Some exports', score: 2 },
-			{ label: 'Mostly yes', score: 3 },
-			{ label: 'Yes — APIs / integrations', score: 4 }
+			{ label: 'All by hand / copy-paste', score: 1 },
+			{ label: 'Some manual exports', score: 2 },
+			{ label: 'Mostly automatic', score: 3 },
+			{ label: 'Our systems already pass data to each other automatically', score: 4 }
 		]
 	},
 	{
@@ -179,9 +240,21 @@ export const QUESTIONS: Question[] = [
 		dimension: 'governance-risk',
 		prompt: 'If the AI gets one wrong and nobody catches it, what happens?',
 		options: [
-			{ label: 'Real damage — money, legal, safety, reputation', score: 1 },
-			{ label: 'Some rework', score: 2 },
+			{ label: 'Real damage — money, legal, safety, reputation', score: 1, cap: 'real-damage' },
+			{ label: 'Some rework', score: 2.5 },
 			{ label: 'Minor annoyance', score: 4 }
+		]
+	},
+	{
+		id: 'gr2',
+		dimension: 'governance-risk',
+		// Data-privacy / confidential-data — the most common real-world SMB governance failure.
+		prompt:
+			'Does this involve customer personal info, regulated, or confidential data — and is any of it going into public AI tools?',
+		options: [
+			{ label: 'Yes — and people are pasting it into public AI tools', score: 1, insight: 'flag:privacy' },
+			{ label: 'Yes, but we keep it inside controlled tools', score: 2.5 },
+			{ label: 'No sensitive or confidential data involved', score: 4 }
 		]
 	}
 ];
@@ -196,8 +269,9 @@ export interface Band {
 	cta: string;
 }
 
-// PLACEHOLDER bands & thresholds — Evan to calibrate the numbers.
-// Note: 'not-a-fit' is selected only when a gate triggers (not by score).
+// PLACEHOLDER bands & thresholds — Evan to calibrate. 75/50 held pending live
+// calibration against ~20 known businesses (validation report §4). 'not-a-fit'
+// is gate-only (not score-based).
 export const BANDS: Band[] = [
 	{
 		id: 'not-a-fit',
@@ -235,14 +309,27 @@ export const BANDS: Band[] = [
 
 /**
  * Observation snippet bank — PLACEHOLDER copy, in Evan's draft voice.
- * Keyed by trigger; the engine assembles up to 3 (gate first, then the
- * lowest-scoring dimensions). Evan to finalise wording.
+ * The engine assembles: cap reason (if floored) → gate / chosen-option insights →
+ * the lowest-scoring dimensions, capped at 3. Evan to finalise wording.
  */
 export const SNIPPETS: Record<string, string> = {
 	'gate:llm-deterministic':
-		'The task you described needs the same exact answer every time. Today’s LLMs are probabilistic — brilliant at “good enough, a human checks it,” and the wrong tool when “correct every time” is the whole point. A rules-based automation will serve you better here than AI.',
+		'You said the AI’s own written answer has to be exactly right every time, with no system behind it to look it up. Today’s LLMs are probabilistic: they’re strong when “good enough, a human checks it” is acceptable, and the wrong tool when a written answer must be verbatim-correct on its own. A rules-based automation will serve you better here. (Note the distinction: an LLM can guarantee an exact *format*, but not an exact *fact* on its own — that’s what makes this case a poor fit.)',
 	'gate:ml-no-data':
 		'To predict or flag something, a model has to learn from past examples of it happening — and you don’t yet have those records with enough history. The highest-value first step isn’t AI; it’s starting to capture that data cleanly. Do that for a few months and this becomes possible.',
+	// Gate-split teaching moment — surfaced when the "a computer could look it up" option is chosen.
+	'insight:tool-front-door':
+		'Good news: your “exact answer” is something a computer can look up or calculate — so this *is* a fit, just not the way most people picture it. The pattern is the LLM as a friendly front door (you ask in plain language; it calls the system that holds the real answer), not the LLM as the source of truth. You get exactness from the system and ease-of-use from the AI.',
+	// Privacy flag — surfaced when sensitive data is going into public tools.
+	'flag:privacy':
+		'One thing to handle first: sensitive or confidential data is going into public AI tools. That’s the most common avoidable AI risk for a business your size (and a PIPEDA exposure). The fix is cheap — a clear rule on what may be pasted where, plus tools that keep that data inside your walls — and it should come before you automate anything on top.',
+	// Targeted-floor cap explanations.
+	'cap:use-case':
+		'Before readiness, the use case itself needs sharpening — right now it reads more like a direction than a specific, ownable job. That’s the single biggest predictor of whether AI pays off, so it’s worth nailing down first, no matter how strong everything else is.',
+	'cap:real-damage':
+		'You flagged that a wrong answer here causes real damage — money, legal, safety, or reputation. That doesn’t rule AI out, but it does mean you don’t get a green light on the strength of the rest: this needs a human firmly in the loop and clear guardrails *before* anything ships, not after.',
+	'cap:risk-blind':
+		'This is the combination to be most careful with: a wrong answer causes real damage, *and* there’s no agreed way yet to tell a good answer from a bad one. Until you can reliably catch the bad ones, there’s no safe way to let AI run here — defining and verifying “good” is the first piece of work, before anything else.',
 	'low:use-case-fit':
 		'Right now this reads more like “use AI more” than a specific job. The teams that get value name one task — done often, costing real hours — and point AI at exactly that. Pick the single most repetitive time-sink and start there.',
 	'low:team-capability':
@@ -250,7 +337,7 @@ export const SNIPPETS: Record<string, string> = {
 	'low:data-foundation':
 		'Your data is spread across spreadsheets and manual steps. Models need it accessible and consistent — so the highest-leverage move is tidying how it’s captured before building anything on top.',
 	'low:tooling-infra':
-		'Getting data in and out of your systems is still mostly manual. That’s a solvable plumbing problem, and worth solving before you automate on top of it.',
+		'Moving data between your systems is still mostly manual. That’s a solvable plumbing problem, and worth solving before you automate on top of it.',
 	'low:governance-risk':
 		'A wrong answer here causes real damage, so this needs a human firmly in the loop and clear guardrails before any automation. Worth doing — carefully, not quickly.',
 	strong:
