@@ -1,5 +1,5 @@
-import { questionsForBranch, isComplete, type Answers } from '../consulting/scoring';
-import type { Branch } from '../consulting/snapshot-content';
+import { scoreSnapshot, questionsForBranch, isComplete, type Answers } from '../consulting/scoring';
+import { RUBRIC_VERSION, type Branch } from '../consulting/snapshot-content';
 
 const BRANCHES: readonly Branch[] = ['llm', 'ml', 'both'];
 
@@ -72,4 +72,84 @@ export function snapshotPruneCutoff(nowMs: number, months = 24): number {
 	const d = new Date(nowMs);
 	d.setUTCMonth(d.getUTCMonth() - months);
 	return d.getTime();
+}
+
+export interface SnapshotRow {
+	id: string;
+	created_at: number;
+	rubric_version: string;
+	branch: Branch;
+	answers_json: string;
+	overall: number;
+	band_id: string;
+	gate: string | null;
+	cap_reason: string | null;
+	dimensions_json: string;
+	source: 'deeplink' | 'organic';
+	device_class: 'mobile' | 'desktop';
+}
+
+export interface RowContext {
+	deviceClass: 'mobile' | 'desktop';
+	source: 'deeplink' | 'organic';
+	now: number;
+}
+
+/** Re-run the authoritative score server-side and shape the row to be stored. */
+export function buildSnapshotRow(branch: Branch, answers: Answers, ctx: RowContext): SnapshotRow {
+	const result = scoreSnapshot(branch, answers);
+	return {
+		id: crypto.randomUUID(),
+		created_at: ctx.now,
+		rubric_version: RUBRIC_VERSION,
+		branch,
+		answers_json: JSON.stringify(answers),
+		overall: result.overall,
+		band_id: result.band.id,
+		gate: result.gate,
+		cap_reason: result.capReason,
+		dimensions_json: JSON.stringify(result.dimensions),
+		source: ctx.source,
+		device_class: ctx.deviceClass
+	};
+}
+
+const INSERT_SQL =
+	'INSERT INTO snapshot_responses ' +
+	'(id, created_at, rubric_version, branch, answers_json, overall, band_id, gate, cap_reason, dimensions_json, source, device_class) ' +
+	'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+
+/** Insert one row using bound parameters only. */
+export async function insertSnapshot(db: D1Database, row: SnapshotRow): Promise<void> {
+	await db
+		.prepare(INSERT_SQL)
+		.bind(
+			row.id,
+			row.created_at,
+			row.rubric_version,
+			row.branch,
+			row.answers_json,
+			row.overall,
+			row.band_id,
+			row.gate,
+			row.cap_reason,
+			row.dimensions_json,
+			row.source,
+			row.device_class
+		)
+		.run();
+}
+
+/** Delete rows older than `months` (default 24). Returns the number removed. */
+export async function pruneOldSnapshots(
+	db: D1Database,
+	nowMs: number,
+	months = 24
+): Promise<number> {
+	const cutoff = snapshotPruneCutoff(nowMs, months);
+	const res = await db
+		.prepare('DELETE FROM snapshot_responses WHERE created_at < ?')
+		.bind(cutoff)
+		.run();
+	return res?.meta?.changes ?? 0;
 }
