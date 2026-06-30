@@ -87,7 +87,7 @@
 			Most teams don’t have an AI problem. They have a prioritisation problem.
 		</p>
 		<p class="mt-4 text-muted-foreground">
-			More than 80% of AI projects fail to reach production
+			By some estimates, more than 80% of AI projects fail
 			<a
 				class="underline-offset-2 hover:underline"
 				href="https://www.rand.org/pubs/research_reports/RRA2680-1.html"
