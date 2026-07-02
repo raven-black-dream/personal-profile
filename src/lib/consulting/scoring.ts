@@ -37,6 +37,10 @@ export interface DimensionScore {
 	normalised: number | null;
 	/** Effective weight on this run (may be overridden by an Option.weightMod). */
 	weight: number;
+	/** How many scored questions fed this dimension on this run. Single-item
+	 *  dimensions are rendered as an ordinal band, not a 0–100 number (false
+	 *  precision — see the rubric validation report). */
+	items: number;
 }
 
 export interface SnapshotResult {
@@ -104,7 +108,7 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 			.filter((s): s is number => typeof s === 'number');
 		const normalised =
 			scores.length > 0 ? normalise(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
-		return { id: dim.id, label: dim.label, normalised, weight };
+		return { id: dim.id, label: dim.label, normalised, weight, items: scores.length };
 	});
 
 	// 4. Weighted overall (only dimensions with a score and non-zero weight on this branch).
@@ -180,8 +184,9 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 }
 
 function pickBand(overall: number): Band {
-	// Score-based bands only (exclude 'not-a-fit', which is gate-only), high→low by `min`.
-	const scored = BANDS.filter((b) => b.id !== 'not-a-fit');
+	// Score-based bands only (exclude 'not-a-fit', which is gate-only). Sorted
+	// high→low by `min` here so band selection never depends on array order.
+	const scored = BANDS.filter((b) => b.id !== 'not-a-fit').sort((a, b) => b.min - a.min);
 	return scored.find((b) => overall >= b.min) ?? scored[scored.length - 1];
 }
 
