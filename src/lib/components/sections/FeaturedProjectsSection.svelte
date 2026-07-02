@@ -36,9 +36,7 @@
 		</h2>
 		<div class="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
 			{#each projects as project (project.title)}
-				<Card.Root
-					class="flex flex-col transition-colors duration-300 hover:border-primary/60"
-				>
+				<Card.Root class="flex flex-col transition-colors duration-300 hover:border-primary/60">
 					<Card.Header>
 						<Card.Title>{project.title}</Card.Title>
 						<Card.Description>{project.description}</Card.Description>
