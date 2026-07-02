@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Button } from '../ui/button';
-	import { Github, Linkedin, FileText } from '@lucide/svelte';
+	import { FileText } from '@lucide/svelte';
+	import GithubIcon from '$lib/components/icons/GithubIcon.svelte';
+	import LinkedinIcon from '$lib/components/icons/LinkedinIcon.svelte';
 </script>
 
 <section class="bg-background/50 py-16 md:py-24">
