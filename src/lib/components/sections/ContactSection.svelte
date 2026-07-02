@@ -22,8 +22,9 @@
 				size="lg"
 				href="https://www.linkedin.com/in/evan-harley-3bab1b22/"
 				target="_blank"
+				rel="noopener noreferrer"
 			>
-				<Linkedin class="mr-2 h-5 w-5" />
+				<LinkedinIcon class="mr-2 h-5 w-5" />
 				LinkedIn
 			</Button>
 			<Button
@@ -31,8 +32,9 @@
 				size="lg"
 				href="https://github.com/raven-black-dream"
 				target="_blank"
+				rel="noopener noreferrer"
 			>
-				<Github class="mr-2 h-5 w-5" />
+				<GithubIcon class="mr-2 h-5 w-5" />
 				GitHub
 			</Button>
 		</div>

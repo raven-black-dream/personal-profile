@@ -5,5 +5,16 @@
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
-	}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "professional-portfolio-snapshots",
+			"database_id": "36a12c25-3559-4f65-ba80-00c3f9023fd4",
+			"migrations_dir": "migrations"
+		}
+	]
+	// No cron trigger: @sveltejs/adapter-cloudflare emits only a fetch handler, so a
+	// declared cron would fire into the void (no scheduled() entry point). Retention
+	// runs via the documented manual prune — see docs/runbooks/snapshot-prune.md.
 }
