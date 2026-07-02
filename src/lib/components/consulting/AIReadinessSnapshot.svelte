@@ -61,7 +61,9 @@
 </script>
 
 <Dialog.Root bind:open {onOpenChange}>
-	<Dialog.Content class="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+	<Dialog.Content
+		class="max-h-[90vh] overflow-y-auto max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-screen max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none sm:max-w-2xl"
+	>
 		<Dialog.Header>
 			<Dialog.Title class="text-lg font-semibold">AI Readiness Snapshot</Dialog.Title>
 		</Dialog.Header>
@@ -120,14 +122,26 @@
 					<p class="mt-2 text-sm text-muted-foreground">{result.band.blurb}</p>
 				</div>
 
-				<!-- AI Readiness Index — placeholder bar viz -->
+				<!-- AI Readiness Index — placeholder bar viz. Single-item dimensions render as
+				     an ordinal band, not a bar: one ordinal answer as a percentage is false
+				     precision (rubric validation report). -->
 				<div class="flex flex-col gap-2">
 					{#each result.dimensions.filter((d) => d.weight > 0 && d.normalised != null) as d (d.id)}
 						<div class="flex items-center gap-3">
 							<span class="w-32 shrink-0 text-xs text-muted-foreground">{d.label}</span>
-							<div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-								<div class="h-full bg-primary" style="width: {d.normalised}%"></div>
-							</div>
+							{#if d.items === 1}
+								<span class="text-xs font-medium text-foreground/80">
+									{(d.normalised as number) >= 75
+										? 'High'
+										: (d.normalised as number) >= 34
+											? 'Medium'
+											: 'Low'}
+								</span>
+							{:else}
+								<div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+									<div class="h-full bg-primary" style="width: {d.normalised}%"></div>
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>
@@ -142,9 +156,12 @@
 
 				<div class="flex flex-col gap-2 sm:flex-row">
 					<a
-						href={fitCallHref}
+						href={result.band.href ?? fitCallHref}
 						class="rounded-md bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground"
-						>{result.band.cta}</a
+						onclick={() => {
+							// Same-page anchors: close the dialog so the browser can scroll to the target.
+							if (result.band.href?.startsWith('#')) open = false;
+						}}>{result.band.cta}</a
 					>
 					<button
 						type="button"
@@ -154,11 +171,11 @@
 				</div>
 
 				<p class="text-xs text-muted-foreground">
-					This snapshot is a guide, not a verdict — it’s scored with simple rules, not AI. A short
+					This snapshot is a guide, not a verdict: it’s scored with simple rules, not AI. A short
 					conversation gets you a sharper read.
 				</p>
 				<p class="text-xs text-muted-foreground">
-					Anonymous answers are kept to improve this tool — no names, no emails.
+					Anonymous answers are kept to improve this tool. No names, no emails.
 				</p>
 			</div>
 		{/if}

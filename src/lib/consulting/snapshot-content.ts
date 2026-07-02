@@ -1,8 +1,16 @@
 /**
  * AI Readiness Snapshot — content & rubric.
  *
- * ⚠️ PLACEHOLDER CONTENT (v0.2, 2026-06-29). Wording/scores/thresholds are still
- * Evan's to finalise. What changed in v0.2 (from the STORM validation pass — see
+ * ⚠️ PLACEHOLDER CONTENT (v0.3, 2026-07-02). Wording/scores/thresholds are still
+ * Evan's to finalise. What changed in v0.3 (post-audit fixes — see
+ * `Consultancy/docs/2026-07-02-snapshot-as-built-spec.md`):
+ *   - df1's scored middle rescored 2 → 2.5 (the v0.2 rescale convention: a
+ *     middle answer normalises to 50, not 33).
+ *   - Bands gained an optional `href` so the result CTA routes where its label
+ *     says (audit anchor, workshops anchor), falling back to the fit call.
+ *   - Em-dash sweep of all user-facing strings (voice rule applies to every
+ *     public-facing surface, not just posts — see 03-voice.md).
+ * What changed in v0.2 (from the STORM validation pass — see
  * `Consultancy/brainstorms/ai-readiness-rubric-validation-STORM.md`):
  *   - Scaling fix: 3-option {1,2,4} items rescored to {1,2.5,4} so a "middle"
  *     answer normalises to 50, not 33.
@@ -26,7 +34,7 @@ export type Branch = 'llm' | 'ml' | 'both';
  * segment answer distributions by rubric. Bump this whenever QUESTIONS,
  * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results.
  */
-export const RUBRIC_VERSION = 'v0.2';
+export const RUBRIC_VERSION = 'v0.3';
 
 export interface Option {
 	label: string;
@@ -74,12 +82,12 @@ export const INTENT_QUESTION = {
 	prompt: 'What are you mainly hoping AI will do for you?',
 	options: [
 		{
-			label: 'Help my people work faster — drafting, summarising, answering questions, research',
+			label: 'Help my people work faster: drafting, summarising, answering questions, research',
 			branch: 'llm' as Branch
 		},
 		{
 			label:
-				'Predict, score, or flag things from our own data — forecasting, risk-scoring, spotting problems',
+				'Predict, score, or flag things from our own data: forecasting, risk-scoring, spotting problems',
 			branch: 'ml' as Branch
 		},
 		{ label: "Both, or I'm not sure yet", branch: 'both' as Branch }
@@ -102,13 +110,13 @@ export const QUESTIONS: Question[] = [
 	{
 		id: 'uc1',
 		dimension: 'use-case-fit',
-		prompt:
-			'For the task you have in mind, how exact does the answer have to be?',
+		prompt: 'For the task you have in mind, how exact does the answer have to be?',
 		branches: ['llm', 'both'],
 		options: [
 			{
 				// Hard gate: the model itself must author a verbatim-correct answer with no system behind it.
-				label: "The AI's own written answer has to be exactly right every time — there's no system behind it to look it up",
+				label:
+					"The AI's own written answer has to be exactly right every time, with no system behind it to look it up",
 				gate: 'llm-deterministic'
 			},
 			{
@@ -138,11 +146,12 @@ export const QUESTIONS: Question[] = [
 		dimension: 'use-case-fit',
 		// Artifact form (was a self-appraisal): asks for an existing written definition,
 		// which resists over-rating better than "could someone tell?".
-		prompt: "Do you have a written, agreed definition of what a 'good' output looks like for this task?",
+		prompt:
+			"Do you have a written, agreed definition of what a 'good' output looks like for this task?",
 		options: [
 			{ label: 'No', score: 1, cap: 'cannot-verify' },
 			{ label: 'Roughly, but not written down', score: 2.5 },
-			{ label: 'Yes — written down and agreed', score: 4 }
+			{ label: 'Yes, written down and agreed', score: 4 }
 		]
 	},
 	{
@@ -154,7 +163,7 @@ export const QUESTIONS: Question[] = [
 		options: [
 			{ label: 'No / not really', score: 1 },
 			{ label: 'One of those, not both', score: 2.5 },
-			{ label: 'Yes — a named owner and a number it would move', score: 4 }
+			{ label: 'Yes, a named owner and a number it would move', score: 4 }
 		]
 	},
 	{
@@ -163,7 +172,7 @@ export const QUESTIONS: Question[] = [
 		// Pure weight-router (no score): makes data-foundation weight intent-sensitive on LLM/both.
 		// "Our own documents" = RAG, where corpus quality is load-bearing → raise the weight.
 		prompt:
-			'Does the AI need to work from your own documents and data to answer — or just general knowledge plus whatever someone pastes in each time?',
+			'Does the AI need to work from your own documents and data to answer, or just general knowledge plus whatever someone pastes in each time?',
 		branches: ['llm', 'both'],
 		options: [
 			{ label: 'Just general knowledge + what we paste in' },
@@ -209,12 +218,12 @@ export const QUESTIONS: Question[] = [
 		id: 'df1',
 		dimension: 'data-foundation',
 		prompt:
-			'The thing you want AI to predict or flag — do you already have records of it actually happening (e.g. past sales, orders, tickets, claims), going back a while, that someone could export from a system?',
+			'The thing you want AI to predict or flag: do you already have records of it actually happening (e.g. past sales, orders, tickets, claims), going back a while, that someone could export from a system?',
 		branches: ['ml', 'both'],
 		options: [
 			{ label: 'No records of it / no real history', gate: 'ml-no-data' },
-			{ label: 'Some, but patchy or short', score: 2 },
-			{ label: 'Yes — consistent records going back a while', score: 4 }
+			{ label: 'Some, but patchy or short', score: 2.5 },
+			{ label: 'Yes, consistent records going back a while', score: 4 }
 		]
 	},
 	{
@@ -234,7 +243,7 @@ export const QUESTIONS: Question[] = [
 		dimension: 'tooling-infra',
 		// Strictly MOVABILITY (system-to-system), de-jargoned. No longer overlaps df2.
 		prompt:
-			'When you need to move data between your systems, does it happen automatically — or does someone export and copy-paste it by hand?',
+			'When you need to move data between your systems, does it happen automatically, or does someone export and copy-paste it by hand?',
 		options: [
 			{ label: 'All by hand / copy-paste', score: 1 },
 			{ label: 'Some manual exports', score: 2 },
@@ -247,7 +256,7 @@ export const QUESTIONS: Question[] = [
 		dimension: 'governance-risk',
 		prompt: 'If the AI gets one wrong and nobody catches it, what happens?',
 		options: [
-			{ label: 'Real damage — money, legal, safety, reputation', score: 1, cap: 'real-damage' },
+			{ label: 'Real damage: money, legal, safety, reputation', score: 1, cap: 'real-damage' },
 			{ label: 'Some rework', score: 2.5 },
 			{ label: 'Minor annoyance', score: 4 }
 		]
@@ -257,9 +266,13 @@ export const QUESTIONS: Question[] = [
 		dimension: 'governance-risk',
 		// Data-privacy / confidential-data — the most common real-world SMB governance failure.
 		prompt:
-			'Does this involve customer personal info, regulated, or confidential data — and is any of it going into public AI tools?',
+			'Does this involve customer personal info, regulated, or confidential data, and is any of it going into public AI tools?',
 		options: [
-			{ label: 'Yes — and people are pasting it into public AI tools', score: 1, insight: 'flag:privacy' },
+			{
+				label: 'Yes, and people are pasting it into public AI tools',
+				score: 1,
+				insight: 'flag:privacy'
+			},
 			{ label: 'Yes, but we keep it inside controlled tools', score: 2.5 },
 			{ label: 'No sensitive or confidential data involved', score: 4 }
 		]
@@ -274,6 +287,9 @@ export interface Band {
 	blurb: string;
 	/** The honest next step (routed copy). */
 	cta: string;
+	/** Where the result CTA points. Same-page anchors close the dialog and scroll;
+	 *  omitted = fall back to the fit-call link. */
+	href?: string;
 }
 
 // PLACEHOLDER bands & thresholds — Evan to calibrate. 75/50 held pending live
@@ -285,8 +301,8 @@ export const BANDS: Band[] = [
 		label: 'Not a fit (yet)',
 		min: 0,
 		blurb:
-			'Based on what you described, AI isn’t the right next step here — at least not yet. That’s a useful answer: it saves you from spending on the wrong thing. Here’s what would change that.',
-		cta: 'Read why (or ask me directly)'
+			'Based on what you described, AI isn’t the right next step here, at least not yet. That’s a useful answer: it saves you from spending on the wrong thing. Here’s what would change that.',
+		cta: 'Ask me about it directly'
 	},
 	{
 		id: 'ready-to-build',
@@ -301,16 +317,18 @@ export const BANDS: Band[] = [
 		label: 'Ready to prioritise',
 		min: 50,
 		blurb:
-			'The pieces are mostly here, but they need sequencing — which bet first, what to skip, and a plan you can hand your team. That is exactly what the AI Readiness Audit produces.',
-		cta: 'See the AI Readiness Audit'
+			'The pieces are mostly here, but they need sequencing: which bet first, what to skip, and a plan you can hand your team. That is exactly what the AI Readiness Audit produces.',
+		cta: 'See the AI Readiness Audit',
+		href: '#audit'
 	},
 	{
 		id: 'foundations-first',
 		label: 'Foundations first',
 		min: 0,
 		blurb:
-			'There is a real opportunity here, but a foundation needs to come first before an Audit would pay off. The most useful next step is closing that gap — often a short, practical session.',
-		cta: 'See how a workshop could help'
+			'There is a real opportunity here, but a foundation needs to come first before an Audit would pay off. The most useful next step is closing that gap, often with a short, practical session.',
+		cta: 'See how a workshop could help',
+		href: '#workshops'
 	}
 ];
 
@@ -321,32 +339,32 @@ export const BANDS: Band[] = [
  */
 export const SNIPPETS: Record<string, string> = {
 	'gate:llm-deterministic':
-		'You said the AI’s own written answer has to be exactly right every time, with no system behind it to look it up. Today’s LLMs are probabilistic: they’re strong when “good enough, a human checks it” is acceptable, and the wrong tool when a written answer must be verbatim-correct on its own. A rules-based automation will serve you better here. (Note the distinction: an LLM can guarantee an exact *format*, but not an exact *fact* on its own — that’s what makes this case a poor fit.)',
+		'You said the AI’s own written answer has to be exactly right every time, with no system behind it to look it up. Today’s LLMs are probabilistic: they’re strong when “good enough, a human checks it” is acceptable, and the wrong tool when a written answer must be verbatim-correct on its own. A rules-based automation will serve you better here. (Note the distinction: an LLM can guarantee an exact *format*, but not an exact *fact* on its own. That’s what makes this case a poor fit.)',
 	'gate:ml-no-data':
-		'To predict or flag something, a model has to learn from past examples of it happening — and you don’t yet have those records with enough history. The highest-value first step isn’t AI; it’s starting to capture that data cleanly. Do that for a few months and this becomes possible.',
+		'To predict or flag something, a model has to learn from past examples of it happening, and you don’t yet have those records with enough history. The highest-value first step isn’t AI; it’s starting to capture that data cleanly. Do that for a few months and this becomes possible.',
 	// Gate-split teaching moment — surfaced when the "a computer could look it up" option is chosen.
 	'insight:tool-front-door':
-		'Good news: your “exact answer” is something a computer can look up or calculate — so this *is* a fit, just not the way most people picture it. The pattern is the LLM as a friendly front door (you ask in plain language; it calls the system that holds the real answer), not the LLM as the source of truth. You get exactness from the system and ease-of-use from the AI.',
+		'Good news: your “exact answer” is something a computer can look up or calculate, so this *is* a fit, just not the way most people picture it. The pattern is the LLM as a friendly front door (you ask in plain language; it calls the system that holds the real answer), not the LLM as the source of truth. You get exactness from the system and ease-of-use from the AI.',
 	// Privacy flag — surfaced when sensitive data is going into public tools.
 	'flag:privacy':
-		'One thing to handle first: sensitive or confidential data is going into public AI tools. That’s the most common avoidable AI risk for a business your size (and a PIPEDA exposure). The fix is cheap — a clear rule on what may be pasted where, plus tools that keep that data inside your walls — and it should come before you automate anything on top.',
+		'One thing to handle first: sensitive or confidential data is going into public AI tools. That’s the most common avoidable AI risk for a business your size (and a PIPEDA exposure). The fix is cheap (a clear rule on what may be pasted where, plus tools that keep that data inside your walls) and it should come before you automate anything on top.',
 	// Targeted-floor cap explanations.
 	'cap:use-case':
-		'Before readiness, the use case itself needs sharpening — right now it reads more like a direction than a specific, ownable job. That’s the single biggest predictor of whether AI pays off, so it’s worth nailing down first, no matter how strong everything else is.',
+		'Before readiness, the use case itself needs sharpening. Right now it reads more like a direction than a specific, ownable job. That’s the single biggest predictor of whether AI pays off, so it’s worth nailing down first, no matter how strong everything else is.',
 	'cap:real-damage':
-		'You flagged that a wrong answer here causes real damage — money, legal, safety, or reputation. That doesn’t rule AI out, but it does mean you don’t get a green light on the strength of the rest: this needs a human firmly in the loop and clear guardrails *before* anything ships, not after.',
+		'You flagged that a wrong answer here causes real damage: money, legal, safety, or reputation. That doesn’t rule AI out, but it does mean you don’t get a green light on the strength of the rest: this needs a human firmly in the loop and clear guardrails *before* anything ships, not after.',
 	'cap:risk-blind':
-		'This is the combination to be most careful with: a wrong answer causes real damage, *and* there’s no agreed way yet to tell a good answer from a bad one. Until you can reliably catch the bad ones, there’s no safe way to let AI run here — defining and verifying “good” is the first piece of work, before anything else.',
+		'This is the combination to be most careful with: a wrong answer causes real damage, *and* there’s no agreed way yet to tell a good answer from a bad one. Until you can reliably catch the bad ones, there’s no safe way to let AI run here. Defining and verifying “good” is the first piece of work, before anything else.',
 	'low:use-case-fit':
-		'Right now this reads more like “use AI more” than a specific job. The teams that get value name one task — done often, costing real hours — and point AI at exactly that. Pick the single most repetitive time-sink and start there.',
+		'Right now this reads more like “use AI more” than a specific job. The teams that get value name one task (done often, costing real hours) and point AI at exactly that. Pick the single most repetitive time-sink and start there.',
 	'low:team-capability':
-		'The biggest predictor isn’t the tech — it’s whether your people (and leadership) are actually working with these tools and know their limits. A short, practical session to get a few people productive will move you further than any strategy doc.',
+		'The biggest predictor isn’t the tech. It’s whether your people (and leadership) are actually working with these tools and know their limits. A short, practical session to get a few people productive will move you further than any strategy doc.',
 	'low:data-foundation':
-		'Your data is spread across spreadsheets and manual steps. Models need it accessible and consistent — so the highest-leverage move is tidying how it’s captured before building anything on top.',
+		'Your data is spread across spreadsheets and manual steps. Models need it accessible and consistent, so the highest-leverage move is tidying how it’s captured before building anything on top.',
 	'low:tooling-infra':
 		'Moving data between your systems is still mostly manual. That’s a solvable plumbing problem, and worth solving before you automate on top of it.',
 	'low:governance-risk':
-		'A wrong answer here causes real damage, so this needs a human firmly in the loop and clear guardrails before any automation. Worth doing — carefully, not quickly.',
+		'A wrong answer here causes real damage, so this needs a human firmly in the loop and clear guardrails before any automation. Worth doing: carefully, not quickly.',
 	strong:
-		'You’ve got a specific, well-understood use case, a team that’s already working with these tools, and a sensible read on the risks. The question now is sequencing — which one first, and how.'
+		'You’ve got a specific, well-understood use case, a team that’s already working with these tools, and a sensible read on the risks. The question now is sequencing: which one first, and how.'
 };

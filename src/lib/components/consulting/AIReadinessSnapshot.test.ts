@@ -19,7 +19,7 @@ async function completeWizard(user: ReturnType<typeof userEvent.setup>) {
 	// Q0 — intent: pick LLM branch
 	await user.click(
 		await screen.findByRole('button', {
-			name: 'Help my people work faster — drafting, summarising, answering questions, research'
+			name: 'Help my people work faster: drafting, summarising, answering questions, research'
 		})
 	);
 	// uc1 — exactness: safe non-gate option
@@ -33,13 +33,11 @@ async function completeWizard(user: ReturnType<typeof userEvent.setup>) {
 		})
 	);
 	// uc3 — written definition
-	await user.click(
-		await screen.findByRole('button', { name: 'Yes — written down and agreed' })
-	);
+	await user.click(await screen.findByRole('button', { name: 'Yes, written down and agreed' }));
 	// uc4 — business owner
 	await user.click(
 		await screen.findByRole('button', {
-			name: 'Yes — a named owner and a number it would move'
+			name: 'Yes, a named owner and a number it would move'
 		})
 	);
 	// rag1 — data source (no score, just weight router)
@@ -86,7 +84,7 @@ describe('AIReadinessSnapshot logging', () => {
 		render(AIReadinessSnapshot, { props: { open: true } });
 		await completeWizard(user);
 		expect(
-			screen.getByText(/Anonymous answers are kept to improve this tool — no names, no emails\./i)
+			screen.getByText(/Anonymous answers are kept to improve this tool\. No names, no emails\./i)
 		).toBeInTheDocument();
 	});
 });
