@@ -190,9 +190,10 @@
 
 		<div class="mt-8 rounded-lg border border-border bg-card p-6">
 			<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-				<span class="text-2xl font-semibold">$8,500 CAD</span>
+				<span class="text-2xl font-semibold">$4,500 CAD</span>
 				<span class="text-sm text-muted-foreground"
-					>· founder rate $4,500 for the first 3 clients (in exchange for a case study)</span
+					>for the first 3 clients, in exchange for a case study · standard rate after that:
+					$8,500</span
 				>
 			</div>
 			<p class="mt-3 text-sm font-medium text-foreground/90">
