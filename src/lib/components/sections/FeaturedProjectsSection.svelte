@@ -16,6 +16,7 @@
 				'scikit-learn'
 			],
 			url: null,
+			caseStudyUrl: null,
 			note: 'Public-data (NYC TLC) rerun in progress — code link to follow.'
 		},
 		{
@@ -24,6 +25,7 @@
 				'A multi-user web app that automates progressive-overload programming for hypertrophy — turning each session’s logged sets into the next session’s prescribed sets, load, and reps. Built end to end on a MotherDuck medallion lakehouse with an MLflow research loop on top; that research surfaced a "controller-censoring" effect — a well-tuned training controller erases the very variance naive models chase — reframing the ML work toward honest, diagnostic signal.',
 			tags: ['SvelteKit', 'TypeScript', 'MotherDuck', 'MLflow', 'Kestra', 'Applied ML'],
 			url: 'https://base45.ca',
+			caseStudyUrl: '/projects/base45-mlops',
 			note: null
 		}
 	];
@@ -47,11 +49,16 @@
 						{/each}
 					</Card.Content>
 					<Card.Footer class="mt-auto flex flex-col items-start gap-3">
-						{#if project.url}
-							<Button variant="outline" href={project.url} target="_blank" rel="noopener">
-								View Project
-							</Button>
-						{/if}
+						<div class="flex flex-wrap gap-2">
+							{#if project.url}
+								<Button variant="outline" href={project.url} target="_blank" rel="noopener">
+									View Project
+								</Button>
+							{/if}
+							{#if project.caseStudyUrl}
+								<Button variant="outline" href={project.caseStudyUrl}>Read the Case Study</Button>
+							{/if}
+						</div>
 						{#if project.note}
 							<p class="text-sm text-muted-foreground">{project.note}</p>
 						{/if}

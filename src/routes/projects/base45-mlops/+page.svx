@@ -1,0 +1,163 @@
+<svelte:head>
+	<title>Base45: Shipping a Full MLOps Platform Around a Production Training App — Evan Harley</title>
+	<meta
+		name="description"
+		content="Case study: the data platform, autoregulation engine, and modelling layer behind Base45 — a production hypertrophy training app with a self-hosted MLOps loop."
+	/>
+</svelte:head>
+
+# Base45: Shipping a Full MLOps Platform Around a Production Training App
+
+*Case study — data platform, autoregulation engine, and modelling layer behind [Base45](https://base45.ca), a hypertrophy training app.*
+
+## In brief
+
+Base45 is a production training app I built and operate — live at [base45.ca](https://base45.ca), with early users training on it daily. Around it I built a complete MLOps platform: CDC ingestion into a DuckDB/MotherDuck medallion lakehouse, event-driven Kestra pipelines running an autoregulating progression engine, a nightly data-quality watchdog, and an MLflow registry with three models in production behind a nightly scoring pipeline and a weekly champion/challenger retrain. All of it self-hosted on homelab Kubernetes, with zero GPU budget.
+
+The hard problem turned out to be statistical, not infrastructural. The app is an autoregulating controller: it adjusts training *before* failure modes appear, which means it censors the very outcomes you'd want to predict. Six supervised prediction targets died of that censoring — near-zero positive classes, 97%-one-class labels, signals that couldn't beat trivial baselines. The response was to reframe the modelling portfolio away from forecasters and toward models the censoring can't touch: a per-user reps-to-failure estimator whose recency-weighted revision beat the incumbent by **30.5% held-out MAE** through a real promotion gate, an effort-calibration diagnostic that found I train about 0.4 reps closer to failure than prescribed, and a policy-epoch labeler that recovers which version of the progression engine made each historical decision — the control variable every future causal analysis will need.
+
+Three things to take from this: end-to-end ownership — ingestion, quality, governance, modelling, serving, retraining, all running, none of it slideware. Statistical honesty as an engineering practice — a model was relabeled when ground truth turned out not to exist, and a per-set UI was refused because the noise floor couldn't support it. And judgment about what *not* to build — the most valuable modelling decision in the project was recognizing the censoring problem and reframing around it instead of forcing a forecaster into production.
+
+---
+
+## 1. Motivation
+
+Base45 started as a practical problem — run Renaissance-Periodization-style autoregulated hypertrophy training without spreadsheet bookkeeping — and grew into a production app. This case study is about its second life: once the app was generating real longitudinal data (87 weeks, ~5,700 working sets, ~12,800 post-workout ratings from my own training alone), it turned into a legitimate ML platform.
+
+Two goals, pulling against each other:
+
+1. **An operational one** — the progression engine must actually program next week's training: sets, reps, loads, deloads, mesocycle length. Wrong outputs show up as bad workouts, so correctness is felt immediately, by real users.
+2. **A research one** — treat the whole thing as an MLOps laboratory: real CDC ingestion, a governed lakehouse, model registry, scheduled scoring, drift-aware retraining — the full loop, on self-hosted infrastructure.
+
+The second goal is what makes this a case study rather than an app announcement: every MLOps concern that exists at company scale (data quality, schema governance, label leakage, model promotion, scoring idempotency, orchestration failures) showed up here in miniature, and had to be solved for real.
+
+## 2. Architecture
+
+```
+┌─────────────────┐   CDC (Estuary Flow)   ┌──────────────────────────────┐
+│ SvelteKit app   │ ─────────────────────► │  MotherDuck `base45`         │
+│ (Supabase/PG)   │                        │  bronze → silver → gold, etl │
+└─────────────────┘ ◄───────────────────── └──────────────────────────────┘
+        │              gold write-back              ▲            │
+        │ webhooks (feedback / completion)          │            │ reads
+        ▼                                           │            ▼
+┌─────────────────────────────────────────┐   ┌──────────┐  ┌──────────────────┐
+│ Kestra (homelab k8s)                    │   │ Google   │  │ MLflow           │
+│ • progression flow (recovery webhook)   │   │ Health   │  │ (homelab; Garage │
+│ • gold-sync + completion-progression    │   │ API      │  │  S3 artifacts)   │
+│ • biometrics ingest (daily)             │◄──┘ (Pixel   │  │ 3 models         │
+│ • bronze DQ watchdog (nightly)          │      Watch)  │  │ @production      │
+│ • nightly model scoring                 │              │  └──────────────────┘
+│ • weekly champion/challenger retrain    │              │            │
+└─────────────────────────────────────────┘              │            ▼
+                                                    ┌────────────────────────┐
+                                                    │ dedicated scoring DB   │
+                                                    │ (set scores + run      │
+                                                    │  provenance)           │
+                                                    └────────────────────────┘
+```
+
+The structural choices that matter:
+
+- **A medallion lakehouse on MotherDuck** (DuckDB engine, DuckLake table format), four schemas: bronze (raw Estuary CDC replica plus append-only decision logs), silver (cleaned, deduplicated, cast views), gold (the analytic facts the app and progression engine actually read), and an ops schema for execution logs, data-quality results, and scoring configuration. Gold summaries are written back to Supabase so the app renders analytics without touching the lakehouse.
+- **Serverless, event-driven orchestration.** No long-running service: each Kestra flow clones the repo, runs one entry function, and exits. Progression fires off Supabase webhooks — post-workout feedback, workout completion — not polling. An earlier Kubernetes polling processor and a MinIO/Parquet pipeline were retired in favour of this.
+- **Two write domains, kept apart.** The ETL layer owns the operational lakehouse. The modelling layer may write exactly one governed gold view; every per-set model score lands in a dedicated scoring database instead — so a modelling bug can never corrupt the data the app depends on.
+- **Nothing processes twice.** Every flow logs to an execution log and checks it before processing; the scoring store appends by set and model version specifically so a moving `@production` alias can't silently wipe the accumulated series — a data-loss bug caught in review before it shipped.
+- **A semantic governance layer for querying.** DuckDB catalogs carry no column comments, so the platform ships its own query-correctness layer: an authoritative table catalog, a descent ladder (prefer gold over silver over bronze), a mandatory data-quality pre-flight gate, and a documented gotcha list — the inverted performance score, the recovery rating that's answered one session late, calibration-week semantics, multi-user scoping rules. Any analyst — human or LLM — who queries the lakehouse without this layer produces confidently wrong answers from perfectly clean data.
+
+## 3. The Progression Engine
+
+The engine programs the next workout from the last one, per muscle group and per exercise. It is deliberately a *transparent rules engine*, not a model — its decisions must be explainable at the gym.
+
+The subjective inputs are the app's post-workout questions: a **recovery** rating per muscle group ("didn't get sore" through "still sore"), a **pump** rating, a **muscle burn** rating, an **effort** rating against the session's targets ("felt easy" through "couldn't complete the targets"), and a per-exercise **joint soreness** rating ("none" through "extreme / didn't go away") that tracks connective-tissue stress rather than muscle fatigue.
+
+- **A two-axis decision model.** A *performance axis* — the deviation between achieved and prescribed reps, adjusted for the week's reps-in-reserve target, so early-cycle low-effort weeks require *exceeding* targets to count as progress — mapped through graduated bands into a set delta from −1 to +3. Then a *recovery axis*: the muscle group's recovery rating scales additions down (a "still sore" muscle gets nothing added), and never softens reductions.
+- **Vetoes and rails.** Meaningful joint soreness forces a reduction — connective tissue overrules performance. A "couldn't complete the targets" effort rating forces a reduction; anomalous effort/performance combinations force a hold. Single-decision additions are capped, per-exercise additions are capped, deltas distribute round-robin across a muscle group's exercises, and set counts floor at one.
+- **Calibration weeks.** Each mesocycle opens with a calibration week routed by the combined stimulus reading (pump + recovery + muscle burn) rather than the normal algorithm: low stimulus adds sets, high stimulus removes them. This is also why calibration weeks must be excluded from trend analytics — a semantic rule the governance layer documents so no query silently mixes them in.
+- **A "too-easy" detector.** A breadth-and-magnitude test for objective over-delivery — at least half of a muscle group's exercises beating their targets, by a meaningful margin, with recovery clear — that amplifies or promotes progression. It runs *inside* the delta computation so it can distinguish "recovery scaled this down" from "genuine hold"; a post-hoc version would misclassify. Its thresholds shipped as judgement-set defaults with telemetry emitted on every decision path, to be tuned empirically.
+- **Adaptive mesocycle length.** An adjuster detects early-deload conditions and extends or shortens the training block, with its own idempotency log.
+- **A weekly upward bias.** In hold-band, veto-free weeks, rep- and load-progressed exercises drift one step toward the next effort target instead of holding flat — countering the engine's structural tendency to sit still.
+
+One story from this layer: muscle groups trained once a week were permanently under-progressed. The recovery-triggered flow fired after the *first set* of the next session — before any meaningful data existed — and a stale-target filter left those groups two weeks behind, forever. The fix was architectural, not a patch: progression for those groups moved to a completion-triggered flow chained after the gold sync, so it fires exactly once, with full data.
+
+## 4. Data Engineering and Quality
+
+- **Biometrics ingestion.** A daily zero-Python Kestra flow pulls resting heart rate, heart-rate variability, blood oxygen, and sleep stages from the Google Health API (Pixel Watch) into bronze, with a silver view that deduplicates to the freshest fetch per day and reconciles multi-session sleep. "Zero Python" was a risk-class decision: no Python database connection in the flow means no possibility of the default-connection-string class of accident.
+- **Bronze conform views.** Silver views neutralize known raw-data defects: duplicate set rows, not-answered sentinel values, and the null-target artifact that once produced a phantom "training volume dropped 2×" signal.
+- **A nightly data-quality watchdog.** An assertion suite — uniqueness, integrity, completeness, plausibility, validity, in blocking and warning tiers — runs nightly into a results table and alerts only on blocking-tier *regressions*. That scoping came the hard way: when a headline anomaly traced to structurally-expected calibration-week nulls rather than an ongoing defect, the watchdog's job was defined as regression detection, not historical cleanup.
+- **Schema governance.** Gold view DDL — previously live-edited on the lakehouse — was brought under source control, and the aggregation layer rewritten: average-of-ratios errors fixed, and every imputed metric split into raw, presence-flag, and imputed columns so ML consumers can refuse imputed values.
+
+The platform's flagship "silent wrongness" example, and the reason the governance layer exists: the per-exercise performance score is **inverted** — the midpoint means on-target, and *higher is worse*. Nothing about the column tells you that. It's exactly the kind of semantic landmine that turns clean data into confident nonsense, and it's why every query goes through the catalog rather than guessed column semantics.
+
+## 5. The Modelling Layer — and the Finding That Reframed It
+
+### The censoring problem
+
+The obvious ML roadmap — predict plateaus, predict readiness, predict performance — collapsed on contact with the data: **a well-functioning autoregulating engine censors the outcomes you'd want to learn from.** It adjusts volume and load *before* failure modes manifest. All of these actually happened:
+
+- A plateau label built from strength and volume stalls yields a positive class near zero, because the engine deloads before a plateau ever expresses.
+- Set-level performance outcomes are 97% one class; a rep-gap regressor can't beat "predict zero."
+- An exciting "+4.4 reps over target" signal was an artifact of bodyweight exercises logged at zero load.
+- A recovery↔load correlation collapsed by a factor of six once controlled for muscle group and week. Calves get more sets *and* get sorer; that's composition, not dose-response.
+- Next-day heart-rate variability is close to a random walk: nothing — not gradient boosting, not load features, not sleep features — beat a trailing 7-day baseline. Recovery got a descriptive baseline with a smallest-worthwhile-change band instead of a forecaster.
+- The prescribed effort target turned out to be a deterministic function of the training week, which is a label-leakage landmine for any naive feature set.
+
+The reframe: stop fighting the censoring and build things that are *immune to it* — descriptive per-user estimators, effort diagnostics, and policy labelers — and treat the negative results as deliverables in their own right.
+
+### What's in production
+
+Three models sit in the MLflow registry at `@production`, scored nightly:
+
+**A reps-to-failure estimator.** Per user and per exercise: an anchor capacity plus a within-cell load→reps slope, guarded to a narrow load band, with out-of-support cells returning NULL rather than a guess. The recency-weighted revision — exponential decay on the anchor, with a static per-user fallback so no user regresses — went through a champion/challenger gate on causally-ordered held-out error: **MAE 2.33 → 1.62, a 30.5% improvement**, with every user improving, not just me. A backtest also drew a line: within-cell noise means a *per-set* point estimate carries an error bar comparable to the effort-target spacing itself, so only aggregate surfaces are legitimate. The planned per-set prescription preview was rejected on those grounds — the model shipped; the dishonest UI for it didn't.
+
+**An effort-calibration diagnostic.** Estimates the actual proximity-to-failure of a set by anchoring capacity on the user's own to-failure sets, then measures the gap to prescription. Its finding: I train about 0.4 reps closer to failure than prescribed — mild systematic over-effort. Critically, this model was **relabeled during validation**: a probe showed no true ground-truth failure labels exist in the data, so what began as an "absolute estimator" was demoted to a *relative consistency diagnostic*, and its near-zero persistence across training blocks rules out a predictive "miscalibration coach."
+
+**A policy-epoch labeler.** Not a predictor at all: a classifier mapping each logged progression decision to the generation of progression policy that produced it. It exists because an audit found the progression formula had silently migrated through four mechanisms over eight months while the change log stayed empty. It's immune to the censoring problem — it characterizes the policy, not an outcome — and it's the control variable any future causal analysis of training outcomes will need.
+
+Alongside the models, one governed analytical view classifies each muscle group against a *personalized, calibrated* minimum effective volume — using the athlete's own calibration-week baselines rather than population tables, with fractional credit for indirect volume via a hand-built exercise taxonomy. Its result: no muscle group under-dosed, and three earlier single-condition alarms refuted. Its thresholds are literature-derived heuristics and are labelled as such.
+
+### The MLOps loop
+
+- **Track → register → serve → consume** on self-hosted MLflow (Postgres backend, Garage S3 artifacts), proven end-to-end with a disposable smoke-test model before any real modelling — then the smoke test was deleted from the registry.
+- **Nightly scoring** loads the production models, scores every completed weighted set for *all* users, stamps model version and timestamp, and appends to the dedicated scoring store. Backfill: 5,660 sets across two years.
+- **Weekly champion/challenger retraining** for the reps-to-failure estimator: the challenger promotes only if it beats the incumbent on the logged held-out metric.
+- **Environment pinning as part of the model artifact.** Models pickled under one Python minor version crashed on the orchestrator's worker running another — misdiagnosed at first as a networking issue. Scoring now runs in a pinned container image.
+- **Collect-then-mine as the serving strategy.** A design decision rooted in a blunt observation about usage: nobody reaches for training analytics on a schedule; they reach for them when something feels off. So instead of scheduled digests nobody reads, the models run as *background instruments*, accumulating a per-set scored dataset that becomes its own longitudinal resource — the platform generating the training data its own future models will need.
+
+## 6. What's Running, What's Proven, What Was Rejected
+
+| Component | Status |
+|---|---|
+| Progression engine (sets/reps/loads, vetoes, too-easy detection, adaptive mesocycles) | Shipped — every decision logged and auditable |
+| Event-driven Kestra orchestration (three webhook flows, three scheduled) | Shipped |
+| Medallion lakehouse with source-controlled gold DDL | Shipped |
+| Biometrics ingestion (Google Health → bronze/silver) | Shipped |
+| Nightly data-quality watchdog + conform views | Shipped |
+| Query-governance layer (catalog, descent ladder, DQ gate, gotchas) | Shipped |
+| Reps-to-failure estimator | Shipped + validated — 30.5% held-out MAE improvement via champion/challenger |
+| Effort-calibration diagnostic | Shipped + validated — leave-one-out error ≈ 0, coverage 0.88 |
+| Policy-epoch labeler | Shipped |
+| Nightly scoring + dedicated scoring store | Shipped — 5,660-set backfill |
+| Weekly champion/challenger retrain | Shipped |
+| Rules-based training-readiness score (gold layer) | Shipped — validated against 659 live days |
+| ML readiness forecaster | Negative result — nothing beats a 7-day baseline |
+| Plateau predictor | Not built, by design — the label is censored out of existence |
+| Per-set prescription preview | Rejected — the noise floor can't support honest per-set estimates |
+
+Every number above traces to a logged MLflow run or a committed analysis document.
+
+## 7. Lessons
+
+1. **"Passed review and unit tests" is not "works in production."** The biometrics pipeline cleared code review and its extracted-SQL test suite, then failed seven distinct ways on the real orchestrator runtime. Extracted-logic tests don't exercise the runtime contract; nothing counts as done until it has run where it lives.
+2. **Balanced, abundant data can still be unlearnable.** Row volume says nothing about label variance, persistence, or confounding. Six targets died despite ~5,700 sets. The pre-modelling checklist now: variance check, persistence check, confound check against a time-split trivial baseline — before any model code.
+3. **Interrogate correlations by grouping factor, not just covariate.** The recovery↔load signal was between-muscle composition, not a within-muscle dose-response.
+4. **Validation against a proxy is not validation against ground truth.** The effort estimator's cross-validation looked fine — against its own anchor assumption. One probe for actual ground truth forced an honest relabeling of what the model *is*.
+5. **A moving `@production` alias is a data-loss footgun.** Any scoring store keyed to "current model" gets wiped on re-registration unless writes append by explicit version.
+6. **Environment pinning is part of the model artifact.** Serialized models crossing Python minor versions fail loudly but misleadingly.
+7. **Data-quality artifacts masquerade as model signals.** The two most exciting-looking "findings" in the project both came from null-handling, not from anything real.
+8. **Negative results are deliverables.** The readiness forecaster and plateau predictor are documented no-gos with evidence — which is what kept the platform honest and cheap. The analysis of *why* they can't work is worth more than either model would have been.
+9. **Adversarial review earns its cost.** A standing skeptic pass reversed or scope-limited multiple headline findings before they shipped. Trying to kill your own result is the difference between a diagnostic and a decoration.
+
+---
+
+*Base45 is live at [base45.ca](https://base45.ca). The platform described here runs on self-hosted Kubernetes: Kestra for orchestration, MLflow for the model registry, MotherDuck/DuckDB for the lakehouse, Garage for artifact storage.*
