@@ -156,16 +156,6 @@
 				</li>
 			{/each}
 		</ul>
-
-		<p class="mt-5 text-sm text-muted-foreground">
-			Eligible BC employers can recover up to 80% of training costs through the
-			<a
-				class="underline-offset-2 hover:underline"
-				href="https://www.workbc.ca"
-				target="_blank"
-				rel="noopener noreferrer">BC Employer Training Grant</a
-			>.
-		</p>
 	</div>
 </section>
 
