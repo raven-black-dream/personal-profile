@@ -19,7 +19,10 @@
 	];
 
 	const sessions = [
-		{ format: 'Executive briefing or foundations session (90 min to a half-day)', price: 'from $1,500' },
+		{
+			format: 'Executive briefing or foundations session (90 min to a half-day)',
+			price: 'from $1,500'
+		},
 		{ format: 'Half-day workshop', price: '$4,500–6,000' },
 		{ format: 'Full-day workshop', price: '$7,500–10,000' },
 		{ format: 'Multi-session program', price: '$12,000–20,000' }
@@ -100,8 +103,8 @@
 				href="https://www.rand.org/pubs/research_reports/RRA2680-1.html"
 				target="_blank"
 				rel="noopener noreferrer">(RAND, 2024)</a
-			>, usually not because the technology didn’t work but because the wrong thing got built
-			first. The job isn’t more AI. It’s knowing which bet pays off, and which to skip.
+			>, usually not because the technology didn’t work but because the wrong thing got built first.
+			The job isn’t more AI. It’s knowing which bet pays off, and which to skip.
 		</p>
 	</div>
 </section>
@@ -116,9 +119,7 @@
 				<li>
 					your team is already using AI tools, but you have no map for which bets actually pay off;
 				</li>
-				<li>
-					you want an honest, executable plan, and someone who’ll tell you when not to build.
-				</li>
+				<li>you want an honest, executable plan, and someone who’ll tell you when not to build.</li>
 			</ul>
 		</div>
 		<div>
@@ -141,9 +142,8 @@
 		<p class="mb-3 font-mono text-xs tracking-[0.16em] text-primary uppercase">Learn first</p>
 		<h2 class="text-3xl font-semibold tracking-tight">AI literacy sessions</h2>
 		<p class="mt-3 text-muted-foreground">
-			Most teams start here. Sessions that give your leadership, or your whole team, a working
-			grasp of what AI can and can’t do. Every session ends in something you can use, not a slide
-			deck.
+			Most teams start here. Sessions that give your leadership, or your whole team, a working grasp
+			of what AI can and can’t do. Every session ends in something you can use, not a slide deck.
 		</p>
 
 		<ul class="mt-6 flex flex-col gap-2">
@@ -165,8 +165,8 @@
 		<p class="mb-3 font-mono text-xs tracking-[0.16em] text-primary uppercase">The keystone</p>
 		<h2 class="text-3xl font-semibold tracking-tight">The AI Readiness Audit</h2>
 		<p class="mt-3 text-muted-foreground">
-			A fixed-scope assessment that ends with the one bet worth building first, and the plan to
-			ship it.
+			A fixed-scope assessment that ends with the one bet worth building first, and the plan to ship
+			it.
 		</p>
 
 		<ul class="mt-6 flex flex-col gap-3">
@@ -182,8 +182,7 @@
 			<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 				<span class="text-2xl font-semibold">$4,500 CAD</span>
 				<span class="text-sm text-muted-foreground"
-					>for the first 3 clients, in exchange for a case study · standard rate after that:
-					$8,500</span
+					>for the first 3 clients, in exchange for a case study · standard rate after that: $8,500</span
 				>
 			</div>
 			<p class="mt-3 text-sm font-medium text-foreground/90">
