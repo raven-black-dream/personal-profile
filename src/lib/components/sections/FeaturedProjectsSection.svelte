@@ -16,8 +16,8 @@
 				'scikit-learn'
 			],
 			url: null,
-			caseStudyUrl: null,
-			note: 'Public-data (NYC TLC) rerun in progress — code link to follow.'
+			caseStudyUrl: '/projects/nystrom-ocrkm',
+			note: 'Public-data (NYC-TLC) replication complete — code link to follow.'
 		},
 		{
 			title: 'Base45: Hypertrophy Training App + MLOps Research Layer',
