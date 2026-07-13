@@ -12,10 +12,10 @@
 	const FIT_CALL = 'mailto:evan@evanharley.ca?subject=AI%20Readiness%20-%20fit%20call';
 
 	const deliverables = [
-		'A scored readiness report across the six dimensions that decide whether AI pays off',
+		'A scored readiness report across the seven dimensions that decide whether AI pays off',
 		'A practitioner’s review of your current stack and data',
 		'A prioritised shortlist of 5–8 candidate use-cases: where AI actually pays off, and what to skip',
-		'A 90-day plan your team can start on Monday'
+		'A 90-day plan to get your first use-case shipped, starting Monday'
 	];
 
 	const sessions = [
@@ -31,7 +31,7 @@
 	const faqs = [
 		{
 			q: 'Is this just a slide deck?',
-			a: 'No. You get four concrete things: a scored readiness report, a review of your actual stack and data, a prioritised shortlist of where AI pays off, and a 90-day plan your team can start on Monday. If it isn’t something you can act on, you don’t pay.'
+			a: 'No. You get four concrete things: a scored readiness report, a review of your actual stack and data, a prioritised shortlist of where AI pays off, and a 90-day plan to get your first use-case shipped. If it isn’t something you can act on, you don’t pay.'
 		},
 		{
 			q: 'We already use ChatGPT. Do we need this?',
@@ -247,8 +247,10 @@
 			</li>
 			<li>
 				<span class="font-mono text-xs text-primary">03</span>
-				<p class="mt-1 font-medium text-foreground">A 90-day plan</p>
-				<p class="mt-1">An executable roadmap you own and can run with your team.</p>
+				<p class="mt-1 font-medium text-foreground">Your first use-case, shipped</p>
+				<p class="mt-1">
+					A 90-day plan built around shipping one thing, that you own and run with your team.
+				</p>
 			</li>
 		</ol>
 	</div>

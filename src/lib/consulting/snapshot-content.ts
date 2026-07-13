@@ -1,8 +1,20 @@
 /**
  * AI Readiness Snapshot — content & rubric.
  *
- * ⚠️ PLACEHOLDER CONTENT (v0.3, 2026-07-02). Wording/scores/thresholds are still
- * Evan's to finalise. What changed in v0.3 (post-audit fixes — see
+ * ⚠️ PLACEHOLDER CONTENT (v0.4, 2026-07-13). Wording/scores/thresholds are still
+ * Evan's to finalise. What changed in v0.4 (new dimension — see decision R13 in
+ * `Consultancy/brainstorms/ai-readiness-index-rubric.md`, ticket T-0135):
+ *   - New dimension `process-clarity`: does how the business runs and decides exist
+ *     outside people's heads? An agent can only act on what is written down, so an
+ *     undocumented process is not an automation candidate. Two behavioural items
+ *     (pc1 two-week-absence test, pc2 decision capture) — asking "are you documented?"
+ *     directly would invite the same self-flattery the tc/uc items are shaped to avoid.
+ *   - Weights llm 2 / ml 1 / both 2: on the LLM path it is the ceiling on anything past
+ *     individual copilot use; on the ML path data foundation already carries the load.
+ *   - NOT a gate (coachable, and it is exactly what the build offer produces). A low
+ *     score routes to the Audit as a sequencing constraint.
+ *   - The paid Audit scorecard gains the same dimension, so free and paid stay parallel.
+ * What changed in v0.3 (post-audit fixes — see
  * `Consultancy/docs/2026-07-02-snapshot-as-built-spec.md`):
  *   - df1's scored middle rescored 2 → 2.5 (the v0.2 rescale convention: a
  *     middle answer normalises to 50, not 33).
@@ -34,7 +46,7 @@ export type Branch = 'llm' | 'ml' | 'both';
  * segment answer distributions by rubric. Bump this whenever QUESTIONS,
  * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results.
  */
-export const RUBRIC_VERSION = 'v0.3';
+export const RUBRIC_VERSION = 'v0.4';
 
 export interface Option {
 	label: string;
@@ -66,7 +78,8 @@ export type DimensionId =
 	| 'team-capability'
 	| 'data-foundation'
 	| 'tooling-infra'
-	| 'governance-risk';
+	| 'governance-risk'
+	| 'process-clarity';
 
 export interface Dimension {
 	id: DimensionId;
@@ -102,7 +115,8 @@ export const DIMENSIONS: Dimension[] = [
 	{ id: 'team-capability', label: 'Team capability', weight: { llm: 3, ml: 1, both: 2 } },
 	{ id: 'data-foundation', label: 'Data foundation', weight: { llm: 1, ml: 3, both: 2 } },
 	{ id: 'tooling-infra', label: 'Tooling & infra', weight: { llm: 1, ml: 2, both: 1 } },
-	{ id: 'governance-risk', label: 'Governance & risk', weight: { llm: 1, ml: 1, both: 1 } }
+	{ id: 'governance-risk', label: 'Governance & risk', weight: { llm: 1, ml: 1, both: 1 } },
+	{ id: 'process-clarity', label: 'Process clarity', weight: { llm: 2, ml: 1, both: 2 } }
 ];
 
 // PLACEHOLDER questions — Evan to refine wording/options/scores.
@@ -212,6 +226,31 @@ export const QUESTIONS: Question[] = [
 			{ label: 'No', score: 1 },
 			{ label: 'Maybe, vaguely', score: 2.5 },
 			{ label: 'Yes, clearly', score: 4 }
+		]
+	},
+	{
+		id: 'pc1',
+		dimension: 'process-clarity',
+		// Behavioural (the two-week absence test), not "are you documented?" — an artifact/
+		// consequence question resists over-rating the way uc3 and tc1 do.
+		prompt:
+			'If the person who does your most repetitive job were out for two weeks, could someone else pick it up from something written down?',
+		options: [
+			{ label: 'No, they would have to ask someone', score: 1 },
+			{ label: 'Partly, there are some notes', score: 2.5 },
+			{ label: 'Yes, a current written process they could follow', score: 4 }
+		]
+	},
+	{
+		id: 'pc2',
+		dimension: 'process-clarity',
+		// Decision capture — the harder half, and the one agents actually need.
+		prompt:
+			'The rules behind your recurring decisions (how you price, who you turn down, when something gets escalated): are those written down anywhere?',
+		options: [
+			{ label: 'No, that is my judgement', score: 1 },
+			{ label: 'Written down, but stale or partial', score: 2.5 },
+			{ label: 'Written down and current', score: 4 }
 		]
 	},
 	{
@@ -363,6 +402,8 @@ export const SNIPPETS: Record<string, string> = {
 		'Your data is spread across spreadsheets and manual steps. Models need it accessible and consistent, so the highest-leverage move is tidying how it’s captured before building anything on top.',
 	'low:tooling-infra':
 		'Moving data between your systems is still mostly manual. That’s a solvable plumbing problem, and worth solving before you automate on top of it.',
+	'low:process-clarity':
+		'Most of how your business runs lives in people’s heads. That matters more than which tool you pick, because an AI can only act on what is written down: an undocumented process isn’t an automation candidate yet, it’s a discovery project. The useful part is that writing it down is cheap, and it’s work you’d want done anyway, whether or not you ever automate it.',
 	'low:governance-risk':
 		'A wrong answer here causes real damage, so this needs a human firmly in the loop and clear guardrails before any automation. Worth doing: carefully, not quickly.',
 	strong:
