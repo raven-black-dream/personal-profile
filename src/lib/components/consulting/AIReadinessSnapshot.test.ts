@@ -50,6 +50,14 @@ async function completeWizard(user: ReturnType<typeof userEvent.setup>) {
 	await user.click(await screen.findByRole('button', { name: 'Usually' }));
 	// tc3 — leadership AI literacy
 	await user.click(await screen.findByRole('button', { name: 'Yes, clearly' }));
+	// pc1 — process capture (two-week absence test)
+	await user.click(
+		await screen.findByRole('button', {
+			name: 'Yes, a current written process they could follow'
+		})
+	);
+	// pc2 — decision capture
+	await user.click(await screen.findByRole('button', { name: 'Written down and current' }));
 	// df2 — data location
 	await user.click(await screen.findByRole('button', { name: 'One central system' }));
 	// ti1 — data movability
