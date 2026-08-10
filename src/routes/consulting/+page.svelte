@@ -97,14 +97,15 @@
 			Most teams don’t have an AI problem. They have a prioritisation problem.
 		</p>
 		<p class="mt-4 text-muted-foreground">
-			By some estimates, more than 80% of AI projects fail
+			When AI projects fail, the cause is usually not the technology.
 			<a
 				class="underline-offset-2 hover:underline"
 				href="https://www.rand.org/pubs/research_reports/RRA2680-1.html"
 				target="_blank"
-				rel="noopener noreferrer">(RAND, 2024)</a
-			>, usually not because the technology didn’t work but because the wrong thing got built first.
-			The job isn’t more AI. It’s knowing which bet pays off, and which to skip.
+				rel="noopener noreferrer">RAND interviewed 65 experienced data scientists in 2024</a
+			>, and more than half named the same thing first. It wasn’t a technical limit. It was
+			leadership setting the project on the wrong problem. The job isn’t more AI. It’s knowing which
+			bet pays off, and which to skip.
 		</p>
 	</div>
 </section>
