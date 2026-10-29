@@ -1,5 +1,8 @@
 # Snapshot Result Fixes (rubric v0.6) Implementation Plan
 
+> **READ FIRST:** the two sections at the end, "Controller rulings" and "Corrections from plan verification, red-team and security" (plus its W1 addendum), are binding and override any earlier text in this plan and in the .json summary that conflicts with them (expected arrays for Cases C/C2, CAP_SOURCES, apostrophes, D1 placement).
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fix four defects in the free AI Readiness Snapshot result: weakness messages chosen per question so they match the answers, a privacy cap, a `strong` observation that no longer repeats the band blurb, and a use-case floor at `<= 25`. Bump the rubric to v0.6.
@@ -239,3 +242,9 @@ Sources: `.factory/r6/plan-verification.md` (BLOCK), `.factory/r6/plan-redteam.m
 - **F4:** E5's test may already pass at Task 2's red step; that is expected, not a TDD violation. Note it in the report.
 - **F5:** the v0.6 header block and the SNIPPETS doc comment mention the D1 skip (no weakness message for use-case-fit when the use-case floor applied).
 - **Imports:** add `SNIPPETS`, `BANDS`, `isComplete` imports to the test files that need them.
+
+### Addendum W1 (from the re-check, verified at both Task 1 and final v0.6 states)
+
+- Task 1 still has the old `< 25` floor, so its D1 test must use a fixture BELOW 25: `{ ...A, uc1: 2, uc2: 0, uc3: 0, uc4: 0 }` → `foundations-first`, 70, `cap:use-case`, `[S('cap:use-case'), S('low:df2'), S('low:ti1')]`. Task 1's R1 crash row is `{ ...A, uc1: 2, uc2: 0, uc3: 0, uc4: 0, gr1: 0 }` → `foundations-first`, 66, `cap:use-case`, `[S('cap:use-case'), S('low:gr1'), S('low:df2')]`. Both keep these values in v0.6.
+- The rows sitting exactly at use-case 25 (Cases C, C2, the at-25 R1 row, the R6 row) belong in Task 2, after the floor becomes `<= 25`.
+- Define `C2` in the shared fixtures block (`{ ...A, uc2: 0, uc3: 0, uc4: 0 }`).
