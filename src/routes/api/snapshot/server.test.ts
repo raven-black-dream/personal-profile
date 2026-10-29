@@ -103,4 +103,36 @@ describe('POST /api/snapshot', () => {
 		expect(calls[0].args[11]).toBe('mobile');
 		expect(calls[0].args[10]).toBe('deeplink');
 	});
+
+	it.each([0, 1, 2])('stores ag1 = %i for a complete v0.5 payload, stamped v0.5', async (i) => {
+		const { db, calls } = fakeD1();
+		const body = JSON.stringify({
+			branch: 'both',
+			answers: { ...completeAnswers('both'), ag1: i }
+		});
+		const res = await POST(event(body, { env: { DB: db } }));
+		expect(res.status).toBe(204);
+		expect(calls).toHaveLength(1);
+		expect(JSON.parse(calls[0].args[4] as string)).toMatchObject({ ag1: i });
+		expect(calls[0].args[2]).toBe('v0.5');
+	});
+
+	it('rejects a payload missing ag1 with 400 and writes nothing', async () => {
+		const { db, calls } = fakeD1();
+		const answers = completeAnswers('llm');
+		delete answers.ag1;
+		const res = await POST(event(JSON.stringify({ branch: 'llm', answers }), { env: { DB: db } }));
+		expect(res.status).toBe(400);
+		expect(await res.json()).toEqual({ error: 'incomplete answers' });
+		expect(calls).toHaveLength(0);
+	});
+
+	it('rejects ag1 = 3 with 400 and the ag1 error, writing nothing', async () => {
+		const { db, calls } = fakeD1();
+		const body = JSON.stringify({ branch: 'llm', answers: { ...completeAnswers('llm'), ag1: 3 } });
+		const res = await POST(event(body, { env: { DB: db } }));
+		expect(res.status).toBe(400);
+		expect(await res.json()).toEqual({ error: 'invalid option index for ag1' });
+		expect(calls).toHaveLength(0);
+	});
 });

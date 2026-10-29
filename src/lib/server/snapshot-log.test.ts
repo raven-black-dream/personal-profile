@@ -62,6 +62,31 @@ describe('validateSnapshotPayload', () => {
 	});
 });
 
+describe('validateSnapshotPayload: ag1', () => {
+	it.each([0, 1, 2])('accepts a complete v0.5 set with ag1 = %i', (i) => {
+		const r = validateSnapshotPayload({
+			branch: 'llm',
+			answers: { ...completeAnswers('llm'), ag1: i }
+		});
+		expect(r).toMatchObject({ ok: true, answers: { ag1: i } });
+	});
+	it('rejects a v0.4-shaped set missing ag1 as incomplete (accepted loss, E2)', () => {
+		const answers = completeAnswers('llm');
+		delete answers.ag1;
+		expect(validateSnapshotPayload({ branch: 'llm', answers })).toMatchObject({
+			ok: false,
+			message: 'incomplete answers'
+		});
+	});
+	it.each([3, -1])('rejects ag1 = %i (E3)', (i) => {
+		const r = validateSnapshotPayload({
+			branch: 'llm',
+			answers: { ...completeAnswers('llm'), ag1: i }
+		});
+		expect(r).toMatchObject({ ok: false, message: 'invalid option index for ag1' });
+	});
+});
+
 describe('deriveDeviceClass', () => {
 	it('classifies mobile user-agents', () => {
 		expect(deriveDeviceClass('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)')).toBe('mobile');
