@@ -87,6 +87,13 @@ describe('per-question weakness messages (v0.6)', () => {
 		expect(r.observations).toEqual([S('cap:use-case'), S('low:uc3'), S('low:df2')]);
 		expect(r.observations).not.toContain(S('low:uc2'));
 	});
+	it('D1: under cap:use-case, uc4 is chosen when it is the lowest eligible answer', () => {
+		const r = scoreSnapshot('llm', { ...A, uc1: 2, uc2: 0, uc3: 1, uc4: 0 });
+		expect(r.band.id).toBe('foundations-first');
+		expect(r.overall).toBe(74);
+		expect(r.capReason).toBe('cap:use-case');
+		expect(r.observations).toEqual([S('cap:use-case'), S('low:uc4'), S('low:df2')]);
+	});
 	it('R1: cap:use-case with a risk cap option does not crash and tells gr1 normally', () => {
 		const r = scoreSnapshot('llm', { ...A, uc1: 2, uc2: 0, uc3: 0, uc4: 0, gr1: 0 });
 		expect(r.band.id).toBe('foundations-first');
