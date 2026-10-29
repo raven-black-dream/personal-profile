@@ -104,7 +104,7 @@ describe('POST /api/snapshot', () => {
 		expect(calls[0].args[10]).toBe('deeplink');
 	});
 
-	it.each([0, 1, 2])('stores ag1 = %i for a complete v0.5 payload, stamped v0.5', async (i) => {
+	it.each([0, 1, 2])('stores ag1 = %i for a complete v0.6 payload, stamped v0.6', async (i) => {
 		const { db, calls } = fakeD1();
 		const body = JSON.stringify({
 			branch: 'both',
@@ -114,7 +114,7 @@ describe('POST /api/snapshot', () => {
 		expect(res.status).toBe(204);
 		expect(calls).toHaveLength(1);
 		expect(JSON.parse(calls[0].args[4] as string)).toMatchObject({ ag1: i });
-		expect(calls[0].args[2]).toBe('v0.5');
+		expect(calls[0].args[2]).toBe('v0.6');
 	});
 
 	it('rejects a payload missing ag1 with 400 and writes nothing', async () => {

@@ -1,8 +1,19 @@
 /**
  * AI Readiness Snapshot — content & rubric.
  *
- * ⚠️ PLACEHOLDER CONTENT (v0.5, 2026-10-29). Wording/scores/thresholds are still
- * Evan's to finalise. What changed in v0.5 (measurement only, no result changes — source:
+ * ⚠️ PLACEHOLDER CONTENT (v0.6, 2026-10-29). Wording/scores/thresholds are still
+ * Evan's to finalise.
+ * What changed in v0.6 (result fixes from the 2026-10-29 review, which ran scoreSnapshot on
+ * v0.5 and found four defects; spec docs/superpowers/specs/2026-10-29-snapshot-result-fixes-design.md):
+ *   - Weakness messages are chosen per question (`low:<questionId>`), from the lowest-scoring
+ *     non-top answer in each weak dimension, skipping a question that already produced a cap or
+ *     insight. The six `low:<dimension>` snippets, which described the worst case, are removed.
+ *     No weakness message is added for use-case-fit when the use-case floor applied.
+ *   - gr2 "pasting it into public AI tools" caps Ready to build at Ready to prioritise
+ *     (`cap:privacy`); the existing `flag:privacy` text explains it.
+ *   - The use-case floor triggers at 25 or below (was below 25).
+ *   - `strong` rewritten so it no longer repeats the Ready to build blurb.
+ * What changed in v0.5 (measurement only, no result changes — source:
  * `Consultancy/forward-bets.md` Bet 6, "Capability arrives before adoption", added 2026-10-29):
  *   - New item `ag1`: does any AI tool act on the business's behalf today (send, book or
  *     update without a person doing each step)? Logged with every anonymous response so
@@ -59,7 +70,7 @@ export type Branch = 'llm' | 'ml' | 'both';
  * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results,
  * or whenever the set of questions asked (the logged answer set) changes.
  */
-export const RUBRIC_VERSION = 'v0.5';
+export const RUBRIC_VERSION = 'v0.6';
 
 export interface Option {
 	label: string;
@@ -76,7 +87,7 @@ export interface Option {
 	/** Override a dimension's branch weight for this run (intent-sensitive weighting). */
 	weightMod?: Partial<Record<DimensionId, number>>;
 	/** Triggers the targeted non-compensatory floor (see scoring.ts). */
-	cap?: 'real-damage' | 'cannot-verify';
+	cap?: 'real-damage' | 'cannot-verify' | 'privacy';
 }
 
 export interface Question {
@@ -336,6 +347,7 @@ export const QUESTIONS: Question[] = [
 			{
 				label: 'Yes, and people are pasting it into public AI tools',
 				score: 1,
+				cap: 'privacy',
 				insight: 'flag:privacy'
 			},
 			{ label: 'Yes, but we keep it inside controlled tools', score: 2.5 },
@@ -453,5 +465,5 @@ export const SNIPPETS: Record<string, string> = {
 	'low:gr2':
 		'Sensitive or confidential data is involved, and keeping it inside controlled tools is the right setup. The next step is a written rule on what may go where, so that stays true as more people start using AI.',
 	strong:
-		'You’ve got a specific, well-understood use case, a team that’s already working with these tools, and a sensible read on the risks. The question now is sequencing: which one first, and how.'
+		'Before anything gets built, agree the one number this should move and record where it stands today. Then the result is visible when it lands, not a matter of opinion.'
 };

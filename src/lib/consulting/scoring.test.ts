@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { questionsForBranch, scoreSnapshot, type Answers } from './scoring';
-import { SNIPPETS, type Branch } from './snapshot-content';
+import { BANDS, SNIPPETS, type Branch } from './snapshot-content';
 
 function answerSet(branch: Branch, pick: 'first' | 'mid' | 'last'): Answers {
 	const a: Answers = {};
@@ -13,6 +13,8 @@ function answerSet(branch: Branch, pick: 'first' | 'mid' | 'last'): Answers {
 // Case A from the spec (llm). Cases below are written as spreads of A.
 const A: Answers = { uc1: 3, uc2: 3, uc3: 2, uc4: 2, rag1: 0, tc1: 3, ag1: 0, tc2: 2, tc3: 2,
 	pc1: 2, pc2: 2, df2: 2, ti1: 2, gr1: 2, gr2: 2 };
+const B: Answers = { ...A, df2: 3, ti1: 3, gr1: 2, gr2: 0 };
+const C2: Answers = { ...A, uc2: 0, uc3: 0, uc4: 0 };
 const S = (k: string) => SNIPPETS[k];
 
 function withoutAg1(a: Answers): Answers {
@@ -123,4 +125,63 @@ describe('per-question weakness messages (v0.6)', () => {
 			expect(pin('last')).toEqual({ band: 'ready-to-build', overall: 100, capReason: null });
 		}
 	);
+});
+
+describe('privacy cap, floor at 25, strong copy (v0.6)', () => {
+	const run = (a: Answers) => scoreSnapshot('llm', a);
+	const shape = (a: Answers) => {
+		const r = run(a);
+		return { band: r.band.id, overall: r.overall, capReason: r.capReason };
+	};
+
+	it('Case B: privacy caps Ready to build (AC2)', () => {
+		const r = run(B);
+		expect(shape(B)).toEqual({ band: 'ready-to-prioritise', overall: 95, capReason: 'cap:privacy' });
+		expect(r.observations).toEqual([S('flag:privacy')]);
+		expect(r.observations.filter((o) => o === S('flag:privacy'))).toHaveLength(1);
+		expect(r.observations.join(' ')).not.toContain('real damage');
+	});
+	it('Case C: floor triggers at 25 (AC4)', () => {
+		const a = { ...C2, tc1: 0, tc2: 0, tc3: 0 };
+		expect(shape(a)).toEqual({ band: 'foundations-first', overall: 46, capReason: 'cap:use-case' });
+		expect(run(a).observations).toEqual([S('cap:use-case'), S('low:tc1'), S('low:df2')]);
+	});
+	it('Case C2: strong team no longer escapes the floor', () => {
+		expect(shape(C2)).toEqual({ band: 'foundations-first', overall: 74, capReason: 'cap:use-case' });
+		expect(run(C2).observations).toEqual([S('cap:use-case'), S('low:df2'), S('low:ti1')]);
+	});
+	it('R1 at 25: cap:use-case with a risk cap option does not crash', () => {
+		const a = { ...C2, gr1: 0 };
+		expect(shape(a)).toEqual({ band: 'foundations-first', overall: 69, capReason: 'cap:use-case' });
+		expect(run(a).observations).toEqual([S('cap:use-case'), S('low:gr1'), S('low:df2')]);
+	});
+	it('R6: privacy under the use-case floor still shows flag:privacy', () => {
+		const a = { ...C2, gr2: 0 };
+		expect(shape(a)).toEqual({ band: 'foundations-first', overall: 69, capReason: 'cap:use-case' });
+		expect(run(a).observations).toEqual([S('cap:use-case'), S('flag:privacy'), S('low:df2')]);
+	});
+	it('E4: real-damage outranks privacy', () => {
+		const a = { ...B, gr1: 0 };
+		expect(shape(a)).toEqual({ band: 'ready-to-prioritise', overall: 91, capReason: 'cap:real-damage' });
+		expect(run(a).observations).toEqual([S('cap:real-damage'), S('flag:privacy')]);
+	});
+	it('E5: privacy below Ready to build is a no-op on band', () => {
+		const a = { ...B, tc1: 0, tc2: 0, tc3: 0 };
+		expect(shape(a)).toEqual({ band: 'ready-to-prioritise', overall: 68, capReason: null });
+		expect(run(a).observations).toEqual([S('flag:privacy'), S('low:tc1')]);
+	});
+	it.each([
+		['llm', A],
+		['llm', answerSet('llm', 'last')],
+		['ml', answerSet('ml', 'last')],
+		['both', answerSet('both', 'last')]
+	] as const)('AC3: Ready to build never repeats the blurb (%s)', (branch, a) => {
+		const r = scoreSnapshot(branch, a);
+		expect(r.band.id).toBe('ready-to-build');
+		const blurb = BANDS.find((b) => b.id === 'ready-to-build')!.blurb;
+		for (const o of r.observations) {
+			expect(o).not.toBe(blurb);
+			expect(o).not.toContain('sensible read on the risks');
+		}
+	});
 });

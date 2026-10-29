@@ -56,14 +56,15 @@ export interface SnapshotResult {
 	observations: string[];
 }
 
-/** Any single contributing dimension below this caps the use-case path (see floor). */
+/** Any single contributing dimension at or below this caps the use-case path (see floor). */
 const FLOOR_T = 25;
 
 /** Which option caps an applied `capReason` has already told the user about. */
 const CAP_SOURCES: Record<string, NonNullable<Option['cap']>[]> = {
 	'cap:use-case': [],
 	'cap:risk-blind': ['real-damage', 'cannot-verify'],
-	'cap:real-damage': ['real-damage']
+	'cap:real-damage': ['real-damage'],
+	'cap:privacy': ['privacy']
 };
 
 /** Highest numeric score among a question's options. */
@@ -144,7 +145,7 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 		const realDamage = chosen.some((o) => o.cap === 'real-damage');
 		const cannotVerify = chosen.some((o) => o.cap === 'cannot-verify');
 		// R1 — an unfit use case can't be rescued by a strong stack.
-		if (ucf && ucf.normalised != null && ucf.weight > 0 && ucf.normalised < FLOOR_T) {
+		if (ucf && ucf.normalised != null && ucf.weight > 0 && ucf.normalised <= FLOOR_T) {
 			band = bandById('foundations-first');
 			capReason = 'cap:use-case';
 		}
@@ -157,6 +158,11 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 		else if (realDamage && band.id === 'ready-to-build') {
 			band = bandById('ready-to-prioritise');
 			capReason = 'cap:real-damage';
+		}
+		// Privacy — pasting sensitive data into public AI tools: never a green light.
+		else if (chosen.some((o) => o.cap === 'privacy') && band.id === 'ready-to-build') {
+			band = bandById('ready-to-prioritise');
+			capReason = 'cap:privacy';
 		}
 	}
 

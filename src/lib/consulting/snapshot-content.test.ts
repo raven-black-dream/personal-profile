@@ -4,7 +4,7 @@ import { questionsForBranch } from './scoring';
 
 describe('RUBRIC_VERSION', () => {
 	it('is the current rubric version string', () => {
-		expect(RUBRIC_VERSION).toBe('v0.5');
+		expect(RUBRIC_VERSION).toBe('v0.6');
 	});
 });
 
@@ -84,5 +84,18 @@ describe('per-question weakness messages (v0.6)', () => {
 		const vals = Object.values(LOW_COPY);
 		expect(vals.some((v) => v.includes('\u2019'))).toBe(true);
 		for (const v of vals) expect(v).not.toContain("'");
+	});
+});
+
+describe('privacy cap, strong copy (v0.6)', () => {
+	it('strong is the new copy verbatim', () => {
+		expect(SNIPPETS.strong).toBe(
+			'Before anything gets built, agree the one number this should move and record where it stands today. Then the result is visible when it lands, not a matter of opinion.'
+		);
+	});
+	it('gr2 option 0 carries cap privacy and keeps the flag:privacy insight', () => {
+		const o = QUESTIONS.find((q) => q.id === 'gr2')!.options[0];
+		expect(o.cap).toBe('privacy');
+		expect(o.insight).toBe('flag:privacy');
 	});
 });
