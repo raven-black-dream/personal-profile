@@ -49,15 +49,27 @@ export interface SnapshotResult {
 	/** Overall normalised readiness 0–100 (0 when gated). */
 	overall: number;
 	band: Band;
-	/** If the targeted floor capped the band, the SNIPPETS key explaining why. */
+	/** Which cap set the band (SNIPPETS key, except `cap:privacy`, whose text comes from the `flag:privacy` insight). */
 	capReason: string | null;
 	dimensions: DimensionScore[];
-	/** Up to 3 observation strings (gate/cap first, then insights, then weakest dimensions). */
+	/** Up to 3 observation strings: gate or cap reason, chosen-option insights, `strong`, then one per-question weakness message per weak dimension (weakest first). */
 	observations: string[];
 }
 
 /** Any single contributing dimension below this caps the use-case path (see floor). */
 const FLOOR_T = 25;
+
+/** Which option caps an applied `capReason` has already told the user about. */
+const CAP_SOURCES: Record<string, NonNullable<Option['cap']>[]> = {
+	'cap:use-case': [],
+	'cap:risk-blind': ['real-damage', 'cannot-verify'],
+	'cap:real-damage': ['real-damage']
+};
+
+/** Highest numeric score among a question's options. */
+function topScore(q: Question): number {
+	return Math.max(...q.options.map((o) => o.score).filter((s): s is number => typeof s === 'number'));
+}
 
 export function questionsForBranch(branch: Branch): Question[] {
 	return QUESTIONS.filter((q) => !q.branches || q.branches.includes(branch));
@@ -148,7 +160,8 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 		}
 	}
 
-	// 6. Observations — gate/cap first, then chosen-option insights, then weakest dimensions.
+	// 6. Observations — gate/cap first, then chosen-option insights, `strong`, then one
+	// per-question weakness message per weak dimension (weakest first).
 	const observations: string[] = [];
 	const push = (s: string | undefined) => {
 		if (s && !observations.includes(s)) observations.push(s);
@@ -168,7 +181,25 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 			.filter((d) => (d.normalised as number) < 75);
 		for (const d of weakest) {
 			if (observations.length >= 3) break;
-			push(SNIPPETS[`low:${d.id}`]);
+			// The use-case floor's own text already covers use-case-fit.
+			if (capReason === 'cap:use-case' && d.id === 'use-case-fit') continue;
+			// Lowest-scoring non-top answer in this dimension that no cap or insight already told.
+			let pick: Question | undefined;
+			let pickScore = Infinity;
+			for (const q of applicable) {
+				if (q.dimension !== d.id) continue;
+				const o = answers[q.id] != null ? q.options[answers[q.id]] : undefined;
+				if (!o || typeof o.score !== 'number' || o.score >= topScore(q)) continue;
+				const told =
+					o.insight != null ||
+					(o.cap != null && capReason != null && (CAP_SOURCES[capReason]?.includes(o.cap) ?? false));
+				if (told) continue;
+				if (o.score < pickScore) {
+					pick = q;
+					pickScore = o.score;
+				}
+			}
+			if (pick) push(SNIPPETS[`low:${pick.id}`]);
 		}
 	}
 
