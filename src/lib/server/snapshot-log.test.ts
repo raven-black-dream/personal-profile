@@ -63,7 +63,7 @@ describe('validateSnapshotPayload', () => {
 });
 
 describe('validateSnapshotPayload: ag1', () => {
-	it.each([0, 1, 2])('accepts a complete v0.5 set with ag1 = %i', (i) => {
+	it.each([0, 1, 2])('accepts a complete v0.6 set with ag1 = %i', (i) => {
 		const r = validateSnapshotPayload({
 			branch: 'llm',
 			answers: { ...completeAnswers('llm'), ag1: i }

@@ -1,8 +1,20 @@
 /**
  * AI Readiness Snapshot — content & rubric.
  *
- * ⚠️ PLACEHOLDER CONTENT (v0.5, 2026-10-29). Wording/scores/thresholds are still
- * Evan's to finalise. What changed in v0.5 (measurement only, no result changes — source:
+ * ⚠️ PLACEHOLDER CONTENT (v0.6, 2026-10-29). Wording/scores/thresholds are still
+ * Evan's to finalise.
+ * What changed in v0.6 (result fixes from the 2026-10-29 review, which ran scoreSnapshot on
+ * v0.5 and found four defects; spec docs/superpowers/specs/2026-10-29-snapshot-result-fixes-design.md):
+ *   - Weakness messages are chosen per question (`low:<questionId>`), from the lowest-scoring
+ *     non-top answer in each weak dimension, skipping a question that already produced a cap or
+ *     insight. The six `low:<dimension>` snippets, which described the worst case, are removed.
+ *     Under the use-case floor, uc2 adds no weakness message (uc1, uc3, uc4 stay eligible) and
+ *     the tool-front-door insight is suppressed.
+ *   - gr2 "pasting it into public AI tools" caps Ready to build at Ready to prioritise
+ *     (`cap:privacy`); the existing `flag:privacy` text explains it.
+ *   - The use-case floor triggers at 25 or below (was below 25).
+ *   - `strong` rewritten so it no longer repeats the Ready to build blurb.
+ * What changed in v0.5 (measurement only, no result changes — source:
  * `Consultancy/forward-bets.md` Bet 6, "Capability arrives before adoption", added 2026-10-29):
  *   - New item `ag1`: does any AI tool act on the business's behalf today (send, book or
  *     update without a person doing each step)? Logged with every anonymous response so
@@ -59,7 +71,7 @@ export type Branch = 'llm' | 'ml' | 'both';
  * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results,
  * or whenever the set of questions asked (the logged answer set) changes.
  */
-export const RUBRIC_VERSION = 'v0.5';
+export const RUBRIC_VERSION = 'v0.6';
 
 export interface Option {
 	label: string;
@@ -76,7 +88,7 @@ export interface Option {
 	/** Override a dimension's branch weight for this run (intent-sensitive weighting). */
 	weightMod?: Partial<Record<DimensionId, number>>;
 	/** Triggers the targeted non-compensatory floor (see scoring.ts). */
-	cap?: 'real-damage' | 'cannot-verify';
+	cap?: 'real-damage' | 'cannot-verify' | 'privacy';
 }
 
 export interface Question {
@@ -336,6 +348,7 @@ export const QUESTIONS: Question[] = [
 			{
 				label: 'Yes, and people are pasting it into public AI tools',
 				score: 1,
+				cap: 'privacy',
 				insight: 'flag:privacy'
 			},
 			{ label: 'Yes, but we keep it inside controlled tools', score: 2.5 },
@@ -399,8 +412,13 @@ export const BANDS: Band[] = [
 
 /**
  * Observation snippet bank — PLACEHOLDER copy, in Evan's draft voice.
- * The engine assembles: cap reason (if floored) → gate / chosen-option insights →
- * the lowest-scoring dimensions, capped at 3. Evan to finalise wording.
+ * The engine assembles: cap reason (if capped) → chosen-option insights → `strong` (no cap,
+ * overall >= 75) → one per-question weakness message (`low:<questionId>`) per weak dimension,
+ * weakest dimension first, capped at 3. The question is the lowest-scoring non-top answer in the
+ * dimension that has not already been told by a cap or insight. Under the use-case
+ * floor (`cap:use-case`) uc2 adds no weakness message (uc1, uc3, uc4 stay eligible) and the
+ * tool-front-door insight is not shown.
+ * Evan to finalise wording.
  */
 export const SNIPPETS: Record<string, string> = {
 	'gate:llm-deterministic':
@@ -420,18 +438,34 @@ export const SNIPPETS: Record<string, string> = {
 		'You flagged that a wrong answer here causes real damage: money, legal, safety, or reputation. That doesn’t rule AI out, but it does mean you don’t get a green light on the strength of the rest: this needs a human firmly in the loop and clear guardrails *before* anything ships, not after.',
 	'cap:risk-blind':
 		'This is the combination to be most careful with: a wrong answer causes real damage, *and* there’s no agreed way yet to tell a good answer from a bad one. Until you can reliably catch the bad ones, there’s no safe way to let AI run here. Defining and verifying “good” is the first piece of work, before anything else.',
-	'low:use-case-fit':
-		'Right now this reads more like “use AI more” than a specific job. The teams that get value name one task (done often, costing real hours) and point AI at exactly that. Pick the single most repetitive time-sink and start there.',
-	'low:team-capability':
-		'The biggest predictor isn’t the tech. It’s whether your people (and leadership) are actually working with these tools and know their limits. A short, practical session to get a few people productive will move you further than any strategy doc.',
-	'low:data-foundation':
-		'Your data is spread across spreadsheets and manual steps. Models need it accessible and consistent, so the highest-leverage move is tidying how it’s captured before building anything on top.',
-	'low:tooling-infra':
-		'Moving data between your systems is still mostly manual. That’s a solvable plumbing problem, and worth solving before you automate on top of it.',
-	'low:process-clarity':
-		'Most of how your business runs lives in people’s heads. That matters more than which tool you pick, because an AI can only act on what is written down: an undocumented process isn’t an automation candidate yet, it’s a discovery project. The useful part is that writing it down is cheap, and it’s work you’d want done anyway, whether or not you ever automate it.',
-	'low:governance-risk':
-		'A wrong answer here causes real damage, so this needs a human firmly in the loop and clear guardrails before any automation. Worth doing: carefully, not quickly.',
+	'low:uc1':
+		'A person checking every answer is a sound setup, but the check is where the time goes. Before automating, time how long a review takes: if checking is nearly as slow as doing the work, the gain is small.',
+	'low:uc2':
+		'This isn’t yet one specific task that comes up often. The teams that get value name a single job that costs real hours every week and point AI at exactly that. Pick your most repetitive time-sink and start there.',
+	'low:uc3':
+		'There’s no written, agreed description yet of what a good result looks like. Without one, nobody can tell whether the AI got it right. Writing it down is usually an hour’s work, and it comes before building anything.',
+	'low:uc4':
+		'This task is missing a named owner, a business number it would move, or both. Without them a pilot drifts: nobody is accountable for it and nobody can show it paid off. Settle both before you start.',
+	'low:tc1':
+		'AI use on your team is still limited to a few people, or none yet. A short, practical session to get more of them productive will move you further than any strategy document.',
+	'low:tc2':
+		'Your team doesn’t always catch it when AI gets something wrong. That’s the skill that makes everything else safe, and it can be taught: practice at checking AI output pays off before any automation does.',
+	'low:tc3':
+		'Leadership doesn’t yet have a clear line on what AI shouldn’t be trusted with. Drawing that line is quick, and it’s what lets people use AI with confidence everywhere else.',
+	'low:pc1':
+		'If the person doing your most repetitive job were away, the work would depend on asking around rather than on a written process. An AI can only follow what’s written down, so documenting that job comes first, and it’s worth doing whether or not you automate it.',
+	'low:pc2':
+		'The rules behind your recurring decisions aren’t fully written down and current. Those rules are what an AI needs to act on your behalf. Capturing them is cheap, and it protects the business whether or not you automate.',
+	'low:df1':
+		'Your records of this happening are patchy or short. A model learns from past examples, so a few months of clean, consistent records will do more for you right now than any model.',
+	'low:df2':
+		'Your data isn’t in one central place yet. Models need it accessible and consistent, so pulling the data this task depends on into one place is the step to take before building on top of it.',
+	'low:ti1':
+		'Moving data between your systems still involves some manual steps. That’s a solvable plumbing problem, and worth solving before you automate on top of it.',
+	'low:gr1':
+		'Mistakes here cost you something: rework at least, and possibly more. Keep a person checking every output until you’ve seen how often the AI gets your own work wrong, and put guardrails in place before anything runs on its own.',
+	'low:gr2':
+		'Sensitive or confidential data is involved, and keeping it inside controlled tools is the right setup. The next step is a written rule on what may go where, so that stays true as more people start using AI.',
 	strong:
-		'You’ve got a specific, well-understood use case, a team that’s already working with these tools, and a sensible read on the risks. The question now is sequencing: which one first, and how.'
+		'Before anything gets built, agree the one number this should move and record where it stands today. Then the result is visible when it lands, not a matter of opinion.'
 };

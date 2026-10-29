@@ -49,15 +49,28 @@ export interface SnapshotResult {
 	/** Overall normalised readiness 0–100 (0 when gated). */
 	overall: number;
 	band: Band;
-	/** If the targeted floor capped the band, the SNIPPETS key explaining why. */
+	/** Which cap set the band (SNIPPETS key, except `cap:privacy`, whose text comes from the `flag:privacy` insight). */
 	capReason: string | null;
 	dimensions: DimensionScore[];
-	/** Up to 3 observation strings (gate/cap first, then insights, then weakest dimensions). */
+	/** Up to 3 observation strings: gate or cap reason, chosen-option insights, `strong`, then one per-question weakness message per weak dimension (weakest first). */
 	observations: string[];
 }
 
-/** Any single contributing dimension below this caps the use-case path (see floor). */
+/** Any single contributing dimension at or below this caps the use-case path (see floor). */
 const FLOOR_T = 25;
+
+/** Which option caps an applied `capReason` has already told the user about. */
+const CAP_SOURCES: Record<string, NonNullable<Option['cap']>[]> = {
+	'cap:use-case': [],
+	'cap:risk-blind': ['real-damage', 'cannot-verify'],
+	'cap:real-damage': ['real-damage'],
+	'cap:privacy': ['privacy']
+};
+
+/** Highest numeric score among a question's options. */
+function topScore(q: Question): number {
+	return Math.max(...q.options.map((o) => o.score).filter((s): s is number => typeof s === 'number'));
+}
 
 export function questionsForBranch(branch: Branch): Question[] {
 	return QUESTIONS.filter((q) => !q.branches || q.branches.includes(branch));
@@ -132,7 +145,7 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 		const realDamage = chosen.some((o) => o.cap === 'real-damage');
 		const cannotVerify = chosen.some((o) => o.cap === 'cannot-verify');
 		// R1 — an unfit use case can't be rescued by a strong stack.
-		if (ucf && ucf.normalised != null && ucf.weight > 0 && ucf.normalised < FLOOR_T) {
+		if (ucf && ucf.normalised != null && ucf.weight > 0 && ucf.normalised <= FLOOR_T) {
 			band = bandById('foundations-first');
 			capReason = 'cap:use-case';
 		}
@@ -146,9 +159,15 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 			band = bandById('ready-to-prioritise');
 			capReason = 'cap:real-damage';
 		}
+		// Privacy — pasting sensitive data into public AI tools: never a green light.
+		else if (chosen.some((o) => o.cap === 'privacy') && band.id === 'ready-to-build') {
+			band = bandById('ready-to-prioritise');
+			capReason = 'cap:privacy';
+		}
 	}
 
-	// 6. Observations — gate/cap first, then chosen-option insights, then weakest dimensions.
+	// 6. Observations — gate/cap first, then chosen-option insights, `strong`, then one
+	// per-question weakness message per weak dimension (weakest first).
 	const observations: string[] = [];
 	const push = (s: string | undefined) => {
 		if (s && !observations.includes(s)) observations.push(s);
@@ -157,9 +176,16 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 	if (gate) {
 		push(SNIPPETS[`gate:${gate}`]);
 	} else {
-		if (capReason) push(SNIPPETS[capReason]);
-		// Chosen-option insights (gate-split "front door" fit, privacy flag).
-		for (const opt of chosen) if (opt.insight) push(SNIPPETS[opt.insight]);
+		// cap:privacy has no snippet of its own: its text is the flag:privacy insight below.
+		if (capReason && capReason !== 'cap:privacy') push(SNIPPETS[capReason]);
+		// Chosen-option insights (gate-split "front door" fit, privacy flag). The privacy text comes
+		// only from the flag:privacy insight; there is deliberately no `cap:privacy` snippet.
+		// The front-door teaching moment contradicts the use-case floor, so it is dropped there.
+		for (const opt of chosen) {
+			if (!opt.insight) continue;
+			if (capReason === 'cap:use-case' && opt.insight === 'insight:tool-front-door') continue;
+			push(SNIPPETS[opt.insight]);
+		}
 		if (!capReason && overall >= 75) push(SNIPPETS.strong);
 		// Weakest scored dimensions (below the "ready" line).
 		const weakest = weighted
@@ -168,7 +194,25 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 			.filter((d) => (d.normalised as number) < 75);
 		for (const d of weakest) {
 			if (observations.length >= 3) break;
-			push(SNIPPETS[`low:${d.id}`]);
+			// Lowest-scoring non-top answer in this dimension that no cap or insight already told.
+			let pick: Question | undefined;
+			let pickScore = Infinity;
+			for (const q of applicable) {
+				if (q.dimension !== d.id) continue;
+				// The use-case floor's own text already says what uc2 would.
+				if (capReason === 'cap:use-case' && q.id === 'uc2') continue;
+				const o = answers[q.id] != null ? q.options[answers[q.id]] : undefined;
+				if (!o || typeof o.score !== 'number' || o.score >= topScore(q)) continue;
+				const told =
+					o.insight != null ||
+					(o.cap != null && capReason != null && (CAP_SOURCES[capReason]?.includes(o.cap) ?? false));
+				if (told) continue;
+				if (o.score < pickScore) {
+					pick = q;
+					pickScore = o.score;
+				}
+			}
+			if (pick) push(SNIPPETS[`low:${pick.id}`]);
 		}
 	}
 
