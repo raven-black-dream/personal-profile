@@ -37,7 +37,7 @@
 - `low:df1`: "Your records of this happening are patchy or short. A model learns from past examples, so a few months of clean, consistent records will do more for you right now than any model."
 - `low:df2`: "Your data isn’t in one central place yet. Models need it accessible and consistent, so pulling the data this task depends on into one place is the step to take before building on top of it."
 - `low:ti1`: "Moving data between your systems still involves some manual steps. That’s a solvable plumbing problem, and worth solving before you automate on top of it."
-- `low:gr1`: "A wrong answer here costs you something, even if it’s only rework. Keep a person checking the output until you’ve seen how often the AI gets your own work wrong."
+- `low:gr1`: "Mistakes here cost you something: rework at least, and possibly more. Keep a person checking every output until you’ve seen how often the AI gets your own work wrong, and put guardrails in place before anything runs on its own."
 - `low:gr2`: "Sensitive or confidential data is involved, and keeping it inside controlled tools is the right setup. The next step is a written rule on what may go where, so that stays true as more people start using AI."
 - `strong` (replaces the old text): "Before anything gets built, agree the one number this should move and record where it stands today. Then the result is visible when it lands, not a matter of opinion."
 
@@ -223,3 +223,19 @@ Plan complete and saved to `docs/superpowers/plans/2026-10-29-snapshot-result-fi
 
 - **D1 ruled:** when `capReason === 'cap:use-case'`, the `use-case-fit` dimension adds NO weakness message (the floor's text already says it). Implement as: skip the dimension in the weakness loop when `capReason === 'cap:use-case' && d.id === 'use-case-fit'`. Update every expected observation array for Cases C, C2 and any other `cap:use-case` fixture to drop `S('low:uc…')` entries for the use-case dimension, and add a test that a `cap:use-case` result contains no `low:uc1`–`low:uc4` text. Spec Assumption 2 now states this.
 - **D2 ruled:** the new copy uses the curly apostrophe ’ (U+2019), matching existing snippets. The Copy lines in this plan and the spec are already converted; transcribe them exactly.
+
+## Corrections from plan verification, red-team and security (2026-10-29, binding; override everything above)
+
+Sources: `.factory/r6/plan-verification.md` (BLOCK), `.factory/r6/plan-redteam.md` (BLOCK), `.factory/r6/security-spec.md` (PASS, S1 WARN). Values below were verified by the red-team running the corrected plan.
+
+- **F1 (expected arrays under D1):** Case C expects `[S('cap:use-case'), S('low:tc1'), S('low:df2')]`; Case C2 expects `[S('cap:use-case'), S('low:df2'), S('low:ti1')]`. Update Task 2 Step 1, JSON TC-10 and Review Focus 3. (Dropping the uc entry frees the slot for the next weak dimension.)
+- **F3 (D1 placement):** implement the D1 skip in Task 1 Step 5 (the weakness loop) and add a test there: a `cap:use-case` result contains none of the `low:uc1`–`low:uc4` texts.
+- **R1 / S1 (crash):** the told lookup must be total. Add `'cap:use-case': []` to `CAP_SOURCES` AND read it with `CAP_SOURCES[capReason]?.includes(o.cap) ?? false`. Add a regression row: `{ ...A, uc2: 0, uc3: 0, uc4: 0, gr1: 0 }` → band `foundations-first`, overall 69, capReason `cap:use-case`, observations `[S('cap:use-case'), S('low:gr1'), S('low:df2')]`.
+- **R2 (unanswered question):** guard the chosen-option read (`const o = answers[q.id] != null ? q.options[answers[q.id]] : undefined`; skip when undefined). Add an ag1 equality case on fixture `A` (with vs without ag1, deep-equal).
+- **R4 (gr1 below Ready to build):** resolved by new `low:gr1` copy, true for both "Real damage" and "Some rework" (already replaced in spec and Copy above): "Mistakes here cost you something: rework at least, and possibly more. Keep a person checking every output until you’ve seen how often the AI gets your own work wrong, and put guardrails in place before anything runs on its own."
+- **R5 (AC3):** keep the "no observation equals the blurb" assertion but the load-bearing checks are: `strong` equals the new copy exactly, and no Ready to build observation contains "sensible read on the risks".
+- **R6 (E5/E6 pins):** add rows `{ ...C2, gr2: 0 }` → `foundations-first`, 69, `cap:use-case`, `[S('cap:use-case'), S('flag:privacy'), S('low:df2')]`; and for each branch's all-first (gated) set, observations are exactly `[S('gate:<gate>')]`.
+- **F2 (apostrophes):** delete the Global Constraints / Review Focus bullets that say to use ASCII apostrophes. New copy uses ’ (U+2019); a test should assert at least one new snippet contains ’ and none contains ASCII `'`.
+- **F4:** E5's test may already pass at Task 2's red step; that is expected, not a TDD violation. Note it in the report.
+- **F5:** the v0.6 header block and the SNIPPETS doc comment mention the D1 skip (no weakness message for use-case-fit when the use-case floor applied).
+- **Imports:** add `SNIPPETS`, `BANDS`, `isComplete` imports to the test files that need them.

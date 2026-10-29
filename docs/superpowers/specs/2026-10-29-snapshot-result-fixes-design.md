@@ -50,7 +50,7 @@ Fixes four defects in the free AI Readiness Snapshot's result, all confirmed by 
 - `low:df1`: "Your records of this happening are patchy or short. A model learns from past examples, so a few months of clean, consistent records will do more for you right now than any model."
 - `low:df2`: "Your data isn’t in one central place yet. Models need it accessible and consistent, so pulling the data this task depends on into one place is the step to take before building on top of it."
 - `low:ti1`: "Moving data between your systems still involves some manual steps. That’s a solvable plumbing problem, and worth solving before you automate on top of it."
-- `low:gr1`: "A wrong answer here costs you something, even if it’s only rework. Keep a person checking the output until you’ve seen how often the AI gets your own work wrong."
+- `low:gr1`: "Mistakes here cost you something: rework at least, and possibly more. Keep a person checking every output until you’ve seen how often the AI gets your own work wrong, and put guardrails in place before anything runs on its own."
 - `low:gr2`: "Sensitive or confidential data is involved, and keeping it inside controlled tools is the right setup. The next step is a written rule on what may go where, so that stays true as more people start using AI."
 - `strong` (replaces the old text): "Before anything gets built, agree the one number this should move and record where it stands today. Then the result is visible when it lands, not a matter of opinion."
 
