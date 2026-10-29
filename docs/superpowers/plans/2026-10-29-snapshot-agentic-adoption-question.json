@@ -1,0 +1,52 @@
+{
+  "feature_slug": "snapshot-agentic-adoption-question",
+  "feature_title": "Snapshot Agentic-Adoption Question",
+  "branch_name": "claude/feature/snapshot-agentic-adoption-question",
+  "spec_path": "docs/superpowers/specs/2026-10-29-snapshot-agentic-adoption-question-design.md",
+  "plan_path": "docs/superpowers/plans/2026-10-29-snapshot-agentic-adoption-question.md",
+  "test_cmd": "npm test",
+  "tasks": [
+    {
+      "id": 1,
+      "description": "Add unscored ag1 question after tc1, bump RUBRIC_VERSION to v0.5 with header/doc comments; add content tests, new scoring regression test (no-effect + gate), and update the component wizard walk to answer ag1 and assert it is posted",
+      "files_to_touch": [
+        "src/lib/consulting/snapshot-content.ts",
+        "src/lib/consulting/snapshot-content.test.ts",
+        "src/lib/consulting/scoring.test.ts",
+        "src/lib/components/consulting/AIReadinessSnapshot.test.ts"
+      ],
+      "owner": "agent"
+    },
+    {
+      "id": 2,
+      "description": "Pin server validation and logging of ag1 (accepted at 0-2 and stamped v0.5; rejected when missing or out of range), then run npm test, npm run check, npm run build",
+      "files_to_touch": [
+        "src/lib/server/snapshot-log.test.ts",
+        "src/lib/server/snapshot-log-db.test.ts",
+        "src/routes/api/snapshot/server.test.ts"
+      ],
+      "owner": "agent"
+    }
+  ],
+  "test_cases": [
+    { "id": "TC-1", "maps_to_criterion": "AC1", "description": "questionsForBranch(b) contains ag1 exactly once, immediately after tc1, for llm/ml/both", "type": "unit", "owner": "agent" },
+    { "id": "TC-2", "maps_to_criterion": "FR1-FR5", "description": "ag1 has exact prompt, dimension tooling-infra, no branches field, options No/Not sure/Yes carrying only a label", "type": "unit", "owner": "agent" },
+    { "id": "TC-3", "maps_to_criterion": "AC5", "description": "RUBRIC_VERSION === 'v0.5'", "type": "unit", "owner": "agent" },
+    { "id": "TC-4", "maps_to_criterion": "AC2 / E1", "description": "For each branch, on all-first and all-last answer sets, scoreSnapshot with ag1 = 0/1/2 deep-equals the result with ag1 removed", "type": "unit", "owner": "agent" },
+    { "id": "TC-5", "maps_to_criterion": "E4", "description": "Gated answer sets (llm, ml) with ag1 answered still score not-a-fit, overall 0, gate non-null", "type": "unit", "owner": "agent" },
+    { "id": "TC-6", "maps_to_criterion": "AC3", "description": "Component wizard walk answers ag1 ('Yes'), reaches the result screen, and the logged POST body contains ag1: 2", "type": "integration", "owner": "agent" },
+    { "id": "TC-7", "maps_to_criterion": "AC4", "description": "validateSnapshotPayload accepts a complete set with ag1 at 0, 1, 2", "type": "unit", "owner": "agent" },
+    { "id": "TC-8", "maps_to_criterion": "AC4 / E2", "description": "validateSnapshotPayload rejects a set missing ag1 as 'incomplete answers'", "type": "unit", "owner": "agent" },
+    { "id": "TC-9", "maps_to_criterion": "AC4 / E3", "description": "validateSnapshotPayload rejects ag1 = 3 and ag1 = -1 as invalid option index", "type": "unit", "owner": "agent" },
+    { "id": "TC-10", "maps_to_criterion": "FR9 / AC4", "description": "buildSnapshotRow logs ag1 in answers_json and stamps rubric_version 'v0.5'", "type": "unit", "owner": "agent" },
+    { "id": "TC-11", "maps_to_criterion": "AC4", "description": "POST /api/snapshot stores a v0.5 payload with ag1 (204, bound answers_json has ag1, rubric_version v0.5); returns 400 and writes nothing when ag1 is missing or = 3", "type": "integration", "owner": "agent" },
+    { "id": "TC-12", "maps_to_criterion": "AC6", "description": "npm test, npm run check and npm run build all succeed", "type": "integration", "owner": "agent" }
+  ],
+  "security_concerns": [
+    "No new endpoint, input path or stored column; ag1 travels in the existing anonymous answers object validated against the questionsForBranch allowlist, so only integer indexes 0-2 are accepted",
+    "No personal data: the question is about the business's tooling; privacy claim on the page stays true",
+    "Payload stays well under the 4 KB body cap",
+    "In-flight v0.4 clients are rejected as incomplete by design (accepted loss, pinned by test), not a validation bypass"
+  ],
+  "estimated_complexity": "small"
+}

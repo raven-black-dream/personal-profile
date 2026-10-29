@@ -11,8 +11,8 @@ Each open question from the blind-spot pass is resolved here rather than asked.
 
 1. **Dimension:** ag1 declares `tooling-infra`. The field is required (`snapshot-content.ts:69`) and has no effect on an unscored item. Agentic tooling in place is the closest existing dimension if the item is ever scored.
 2. **Position:** directly after `tc1` ("In the last week, how many people on your team used an AI tool for real work?"). Both are adoption questions, so the respondent answers them together.
-3. **Mandatory:** yes, like every other question (`scoring.ts:605-607`). A skippable item would be a new wizard behaviour, which is out of scope.
-4. **In-flight v0.4 clients:** accepted loss. A tab opened before the deploy and submitted after it sends answers without ag1, which the server rejects as incomplete (`snapshot-log.ts:121-123`). Logging is anonymous, fire-and-forget and low volume, so the window is minutes and the cost is a handful of rows. No version negotiation is added.
+3. **Mandatory:** yes, like every other question (`isComplete`, `scoring.ts:194-196`). A skippable item would be a new wizard behaviour, which is out of scope.
+4. **In-flight v0.4 clients:** accepted loss. A tab opened before the deploy and submitted after it sends answers without ag1, which the server rejects as incomplete (`snapshot-log.ts:39-41`). Logging is anonymous, fire-and-forget and low volume, so the window is minutes and the cost is a handful of rows. No version negotiation is added.
 5. **Wording:** Evan's wording as given, which asks about the business in general, not "the task you have in mind". It is a business-wide fact, and it reads correctly on all three branches.
 6. **Options and indexes:** No (0), Not sure (1), Yes (2). Categorical, not ordinal; analysis must treat them that way.
 7. **No insight, cap, gate or weightMod** on any option. The task says the item must not change any score, band or observation, so no observation either.
@@ -53,7 +53,7 @@ Adds one unscored question to the free AI Readiness Snapshot on the consulting p
 - E1. ag1 answered with any of its three options must give the same `scoreSnapshot` output as the same answers with ag1 absent, on every branch: same overall, band, caps, dimension scores, `items` counts and observations.
 - E2. A v0.4 answer set (no ag1) is rejected by the server as incomplete. Accepted (Assumption 4); a test pins this, so the behaviour is deliberate rather than accidental.
 - E3. An out-of-range ag1 index (3, or -1) is rejected by the existing validation.
-- E4. The gate bands (`llm-deterministic`, `ml-no-data`) still end the wizard and score `not-a-fit` regardless of ag1.
+- E4. A gated answer set (`llm-deterministic`, `ml-no-data`) still scores `not-a-fit` regardless of ag1. (The wizard does not stop at a gate; every question is still asked, and the gate applies at scoring.)
 - E5. The progress bar denominator grows by one on every branch; no layout change needed.
 
 ## Acceptance Criteria
@@ -67,7 +67,7 @@ Adds one unscored question to the free AI Readiness Snapshot on the consulting p
 
 ## Security Considerations
 
-- No new endpoint, input path or stored field. ag1's answer travels inside the existing anonymous `answers` object, validated against the allowlist derived from `QUESTIONS` (`snapshot-log.ts:110-123`), so only indexes 0–2 are accepted.
+- No new endpoint, input path or stored field. ag1's answer travels inside the existing anonymous `answers` object, validated against the allowlist derived from `QUESTIONS` (`snapshot-log.ts:28-41`), so only indexes 0–2 are accepted.
 - No personal data: the question asks about the business's tooling, not about a person, and responses stay unidentified (no names, no emails), keeping the on-page privacy claim true.
 - Body size stays well under the 4 KB cap.
 - No BOLA/IDOR surface: there is no per-user data and no read path.
