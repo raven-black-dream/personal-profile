@@ -1,8 +1,20 @@
 /**
  * AI Readiness Snapshot — content & rubric.
  *
- * ⚠️ PLACEHOLDER CONTENT (v0.4, 2026-07-13). Wording/scores/thresholds are still
- * Evan's to finalise. What changed in v0.4 (new dimension — see decision R13 in
+ * ⚠️ PLACEHOLDER CONTENT (v0.5, 2026-10-29). Wording/scores/thresholds are still
+ * Evan's to finalise. What changed in v0.5 (measurement only, no result changes — source:
+ * `Consultancy/forward-bets.md` Bet 6, "Capability arrives before adoption", added 2026-10-29):
+ *   - New item `ag1`: does any AI tool act on the business's behalf today (send, book or
+ *     update without a person doing each step)? Logged with every anonymous response so
+ *     the share of prospects already using acting agents can be counted for Bet 6.
+ *   - Deliberately UNSCORED: no score, gate, cap, weightMod or insight on any option, so it
+ *     changes no dimension score, band, cap or observation. Answers are categorical
+ *     (No 0 / Not sure 1 / Yes 2), not ordinal. Mandatory like every other question.
+ *   - RUBRIC_VERSION bumped v0.4 -> v0.5 because the answer set changed (analysis segments
+ *     answers_json by version), even though no result does.
+ *   - Accepted loss: a tab opened before the deploy and submitted after it sends no ag1, and
+ *     the server rejects it as incomplete. Logging is anonymous and low volume.
+ * What changed in v0.4 (new dimension — see decision R13 in
  * `Consultancy/brainstorms/ai-readiness-index-rubric.md`, ticket T-0135):
  *   - New dimension `process-clarity`: does how the business runs and decides exist
  *     outside people's heads? An agent can only act on what is written down, so an
@@ -44,13 +56,17 @@ export type Branch = 'llm' | 'ml' | 'both';
 /**
  * Rubric version stamped on every logged snapshot response, so calibration can
  * segment answer distributions by rubric. Bump this whenever QUESTIONS,
- * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results.
+ * DIMENSIONS, BANDS, or the scoring rules change in a way that affects results,
+ * or whenever the set of questions asked (the logged answer set) changes.
  */
-export const RUBRIC_VERSION = 'v0.4';
+export const RUBRIC_VERSION = 'v0.5';
 
 export interface Option {
 	label: string;
-	/** 1–4 readiness score (halves allowed), or omitted for a gate / pure-router option. */
+	/**
+	 * 1–4 readiness score (halves allowed), or omitted for a gate / pure-router option /
+	 * unscored measurement item.
+	 */
 	score?: number;
 	/** If set, choosing this option hard-fails the snapshot on the given path. */
 	gate?: 'llm-deterministic' | 'ml-no-data';
@@ -206,6 +222,16 @@ export const QUESTIONS: Question[] = [
 			{ label: 'About 3–5 (or roughly half)', score: 3 },
 			{ label: 'Most of them', score: 4 }
 		]
+	},
+	{
+		id: 'ag1',
+		// Unscored measurement item for forward-bets Bet 6 (v0.5): no option carries score, gate,
+		// weightMod, cap or insight, so it has no effect on any dimension. `dimension` is required
+		// by the type; tooling-infra is the nearest fit if it is ever scored. Answers are categorical.
+		dimension: 'tooling-infra',
+		prompt:
+			'Does any AI tool act on your behalf today: sending, booking or updating something without someone doing each step?',
+		options: [{ label: 'No' }, { label: 'Not sure' }, { label: 'Yes' }]
 	},
 	{
 		id: 'tc2',

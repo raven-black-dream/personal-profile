@@ -52,6 +52,14 @@ describe('buildSnapshotRow', () => {
 	});
 });
 
+describe('buildSnapshotRow: ag1', () => {
+	it.each([0, 1, 2])('logs ag1 = %i in answers_json and stamps v0.5', (i) => {
+		const row = buildSnapshotRow('ml', { ...completeAnswers('ml'), ag1: i }, ctx);
+		expect(JSON.parse(row.answers_json).ag1).toBe(i);
+		expect(row.rubric_version).toBe('v0.5');
+	});
+});
+
 describe('insertSnapshot', () => {
 	it('inserts exactly one bound-parameter row with all 12 columns', async () => {
 		const { db, calls } = fakeD1();
