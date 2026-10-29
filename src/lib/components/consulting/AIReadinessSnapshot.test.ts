@@ -12,8 +12,8 @@ import AIReadinessSnapshot from './AIReadinessSnapshot.svelte';
  * Complete the wizard via the LLM branch, picking non-gate options by their
  * exact visible label text (robust: unaffected by Dialog close/Back buttons).
  *
- * Branch: llm (13 steps total: 1 intent + 12 branch questions)
- * Questions in order: uc1, uc2, uc3, uc4, rag1, tc1, tc2, tc3, df2, ti1, gr1, gr2
+ * Branch: llm (16 steps total: 1 intent + 15 branch questions)
+ * Questions in order: uc1, uc2, uc3, uc4, rag1, tc1, ag1, tc2, tc3, pc1, pc2, df2, ti1, gr1, gr2
  */
 async function completeWizard(user: ReturnType<typeof userEvent.setup>) {
 	// Q0 — intent: pick LLM branch
@@ -46,6 +46,8 @@ async function completeWizard(user: ReturnType<typeof userEvent.setup>) {
 	);
 	// tc1 — team usage
 	await user.click(await screen.findByRole('button', { name: 'Most of them' }));
+	// ag1 — agentic adoption (unscored measurement item, v0.5)
+	await user.click(await screen.findByRole('button', { name: 'Yes' }));
 	// tc2 — verification literacy
 	await user.click(await screen.findByRole('button', { name: 'Usually' }));
 	// tc3 — leadership AI literacy
@@ -85,6 +87,7 @@ describe('AIReadinessSnapshot logging', () => {
 		await completeWizard(user);
 		expect(postSnapshot).toHaveBeenCalledTimes(1);
 		expect(postSnapshot).toHaveBeenCalledWith('llm', expect.any(Object));
+		expect(postSnapshot.mock.calls[0][1]).toMatchObject({ ag1: 2 });
 	});
 
 	it('shows the transparency line on the result screen', async () => {
