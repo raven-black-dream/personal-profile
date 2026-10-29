@@ -79,21 +79,20 @@ describe('per-question weakness messages (v0.6)', () => {
 		expect(scoreSnapshot(branch, answerSet(branch, 'mid')).observations).toEqual(keys.map(S));
 	});
 
-	it('D1: a cap:use-case result adds no use-case weakness message', () => {
+	it('D1: under cap:use-case, uc2 adds no message but uc3 stays eligible', () => {
 		const r = scoreSnapshot('llm', { ...A, uc1: 2, uc2: 0, uc3: 0, uc4: 0 });
 		expect(r.band.id).toBe('foundations-first');
 		expect(r.overall).toBe(70);
 		expect(r.capReason).toBe('cap:use-case');
-		expect(r.observations).toEqual([S('cap:use-case'), S('low:df2'), S('low:ti1')]);
-		for (const k of ['low:uc1', 'low:uc2', 'low:uc3', 'low:uc4'])
-			expect(r.observations).not.toContain(S(k));
+		expect(r.observations).toEqual([S('cap:use-case'), S('low:uc3'), S('low:df2')]);
+		expect(r.observations).not.toContain(S('low:uc2'));
 	});
 	it('R1: cap:use-case with a risk cap option does not crash and tells gr1 normally', () => {
 		const r = scoreSnapshot('llm', { ...A, uc1: 2, uc2: 0, uc3: 0, uc4: 0, gr1: 0 });
 		expect(r.band.id).toBe('foundations-first');
 		expect(r.overall).toBe(66);
 		expect(r.capReason).toBe('cap:use-case');
-		expect(r.observations).toEqual([S('cap:use-case'), S('low:gr1'), S('low:df2')]);
+		expect(r.observations).toEqual([S('cap:use-case'), S('low:uc3'), S('low:gr1')]);
 	});
 	it('R2: unanswered questions are skipped, not thrown on', () => {
 		const partial = { ...A };
@@ -144,21 +143,28 @@ describe('privacy cap, floor at 25, strong copy (v0.6)', () => {
 	it('Case C: floor triggers at 25 (AC4)', () => {
 		const a = { ...C2, tc1: 0, tc2: 0, tc3: 0 };
 		expect(shape(a)).toEqual({ band: 'foundations-first', overall: 46, capReason: 'cap:use-case' });
-		expect(run(a).observations).toEqual([S('cap:use-case'), S('low:tc1'), S('low:df2')]);
+		expect(run(a).observations).toEqual([S('cap:use-case'), S('low:tc1'), S('low:uc3')]);
 	});
 	it('Case C2: strong team no longer escapes the floor', () => {
 		expect(shape(C2)).toEqual({ band: 'foundations-first', overall: 74, capReason: 'cap:use-case' });
-		expect(run(C2).observations).toEqual([S('cap:use-case'), S('low:df2'), S('low:ti1')]);
+		expect(run(C2).observations).toEqual([S('cap:use-case'), S('low:uc3'), S('low:df2')]);
 	});
 	it('R1 at 25: cap:use-case with a risk cap option does not crash', () => {
 		const a = { ...C2, gr1: 0 };
 		expect(shape(a)).toEqual({ band: 'foundations-first', overall: 69, capReason: 'cap:use-case' });
-		expect(run(a).observations).toEqual([S('cap:use-case'), S('low:gr1'), S('low:df2')]);
+		expect(run(a).observations).toEqual([S('cap:use-case'), S('low:uc3'), S('low:gr1')]);
 	});
 	it('R6: privacy under the use-case floor still shows flag:privacy', () => {
 		const a = { ...C2, gr2: 0 };
 		expect(shape(a)).toEqual({ band: 'foundations-first', overall: 69, capReason: 'cap:use-case' });
-		expect(run(a).observations).toEqual([S('cap:use-case'), S('flag:privacy'), S('low:df2')]);
+		expect(run(a).observations).toEqual([S('cap:use-case'), S('flag:privacy'), S('low:uc3')]);
+	});
+	it('tool-front-door insight is not shown under cap:use-case', () => {
+		const a = { ...C2, uc1: 1 };
+		const r = run(a);
+		expect(r.capReason).toBe('cap:use-case');
+		expect(r.observations).not.toContain(S('insight:tool-front-door'));
+		expect(r.observations).toEqual([S('cap:use-case'), S('low:uc3'), S('low:df2')]);
 	});
 	it('E4: real-damage outranks privacy', () => {
 		const a = { ...B, gr1: 0 };

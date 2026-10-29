@@ -176,9 +176,16 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 	if (gate) {
 		push(SNIPPETS[`gate:${gate}`]);
 	} else {
-		if (capReason) push(SNIPPETS[capReason]);
-		// Chosen-option insights (gate-split "front door" fit, privacy flag).
-		for (const opt of chosen) if (opt.insight) push(SNIPPETS[opt.insight]);
+		// cap:privacy has no snippet of its own: its text is the flag:privacy insight below.
+		if (capReason && capReason !== 'cap:privacy') push(SNIPPETS[capReason]);
+		// Chosen-option insights (gate-split "front door" fit, privacy flag). The privacy text comes
+		// only from the flag:privacy insight; there is deliberately no `cap:privacy` snippet.
+		// The front-door teaching moment contradicts the use-case floor, so it is dropped there.
+		for (const opt of chosen) {
+			if (!opt.insight) continue;
+			if (capReason === 'cap:use-case' && opt.insight === 'insight:tool-front-door') continue;
+			push(SNIPPETS[opt.insight]);
+		}
 		if (!capReason && overall >= 75) push(SNIPPETS.strong);
 		// Weakest scored dimensions (below the "ready" line).
 		const weakest = weighted
@@ -187,13 +194,13 @@ export function scoreSnapshot(branch: Branch, answers: Answers): SnapshotResult 
 			.filter((d) => (d.normalised as number) < 75);
 		for (const d of weakest) {
 			if (observations.length >= 3) break;
-			// The use-case floor's own text already covers use-case-fit.
-			if (capReason === 'cap:use-case' && d.id === 'use-case-fit') continue;
 			// Lowest-scoring non-top answer in this dimension that no cap or insight already told.
 			let pick: Question | undefined;
 			let pickScore = Infinity;
 			for (const q of applicable) {
 				if (q.dimension !== d.id) continue;
+				// The use-case floor's own text already says what uc2 would.
+				if (capReason === 'cap:use-case' && q.id === 'uc2') continue;
 				const o = answers[q.id] != null ? q.options[answers[q.id]] : undefined;
 				if (!o || typeof o.score !== 'number' || o.score >= topScore(q)) continue;
 				const told =

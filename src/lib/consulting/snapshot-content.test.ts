@@ -36,7 +36,7 @@ const LOW_COPY: Record<string, string> = {
 	'low:uc4':
 		'This task is missing a named owner, a business number it would move, or both. Without them a pilot drifts: nobody is accountable for it and nobody can show it paid off. Settle both before you start.',
 	'low:tc1':
-		'Most of your team isn’t using AI for real work yet. A short, practical session to get a few more people productive will move you further than any strategy document.',
+		'AI use on your team is still limited to a few people, or none yet. A short, practical session to get more of them productive will move you further than any strategy document.',
 	'low:tc2':
 		'Your team doesn’t always catch it when AI gets something wrong. That’s the skill that makes everything else safe, and it can be taught: practice at checking AI output pays off before any automation does.',
 	'low:tc3':

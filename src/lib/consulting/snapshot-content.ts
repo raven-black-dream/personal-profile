@@ -8,7 +8,8 @@
  *   - Weakness messages are chosen per question (`low:<questionId>`), from the lowest-scoring
  *     non-top answer in each weak dimension, skipping a question that already produced a cap or
  *     insight. The six `low:<dimension>` snippets, which described the worst case, are removed.
- *     No weakness message is added for use-case-fit when the use-case floor applied.
+ *     Under the use-case floor, uc2 adds no weakness message (uc1, uc3, uc4 stay eligible) and
+ *     the tool-front-door insight is suppressed.
  *   - gr2 "pasting it into public AI tools" caps Ready to build at Ready to prioritise
  *     (`cap:privacy`); the existing `flag:privacy` text explains it.
  *   - The use-case floor triggers at 25 or below (was below 25).
@@ -414,8 +415,9 @@ export const BANDS: Band[] = [
  * The engine assembles: cap reason (if capped) → chosen-option insights → `strong` (no cap,
  * overall >= 75) → one per-question weakness message (`low:<questionId>`) per weak dimension,
  * weakest dimension first, capped at 3. The question is the lowest-scoring non-top answer in the
- * dimension that has not already been told by a cap or insight. No weakness message is added for
- * use-case-fit when the use-case floor applied (the `cap:use-case` text already says it).
+ * dimension that has not already been told by a cap or insight. Under the use-case
+ * floor (`cap:use-case`) uc2 adds no weakness message (uc1, uc3, uc4 stay eligible) and the
+ * tool-front-door insight is not shown.
  * Evan to finalise wording.
  */
 export const SNIPPETS: Record<string, string> = {
@@ -445,7 +447,7 @@ export const SNIPPETS: Record<string, string> = {
 	'low:uc4':
 		'This task is missing a named owner, a business number it would move, or both. Without them a pilot drifts: nobody is accountable for it and nobody can show it paid off. Settle both before you start.',
 	'low:tc1':
-		'Most of your team isn’t using AI for real work yet. A short, practical session to get a few more people productive will move you further than any strategy document.',
+		'AI use on your team is still limited to a few people, or none yet. A short, practical session to get more of them productive will move you further than any strategy document.',
 	'low:tc2':
 		'Your team doesn’t always catch it when AI gets something wrong. That’s the skill that makes everything else safe, and it can be taught: practice at checking AI output pays off before any automation does.',
 	'low:tc3':
