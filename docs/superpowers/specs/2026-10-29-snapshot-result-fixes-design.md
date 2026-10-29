@@ -7,14 +7,15 @@
 ## Assumptions (autonomous mode)
 
 1. **Weakness messages are chosen per question, not per dimension.** For each weak dimension (normalised score below 75, weakest first, as today), the message comes from the answered, scored question in that dimension with the lowest score (ties: earlier in `QUESTIONS` order). Each question's message is written to be true for every non-top answer to that question. This is the smallest change that makes the text match the answers; templating the chosen label into the sentence reads badly.
-2. **No double-telling.** A question whose chosen option already produced an observation (a cap reason or an option insight) is skipped when picking that dimension's weakness message; the next-lowest question in the dimension is used, or nothing if none is left.
+2. **No double-telling.** A question whose chosen option already produced an observation (a cap reason or an option insight) is skipped when picking that dimension's weakness message; the next-lowest question in the dimension is used, or nothing if none is left. Only answers scoring below the question's top option are eligible (an answer at the top score never produces a weakness message). When the use-case floor applied (`cap:use-case`), the use-case-fit dimension adds no weakness message, because the floor's text already says it.
 3. **Privacy cap behaves like the real-damage cap.** Choosing gr2 "Yes, and people are pasting it into public AI tools" caps Ready to build down to Ready to prioritise. It does not move lower bands. The existing privacy text (`flag:privacy`) remains the explanation and appears exactly once.
 4. **Cap precedence:** use-case floor, then risk-blind, then real-damage, then privacy (first match wins, as today). `capReason` records the one that applied.
 5. **Use-case floor becomes "at or below 25"** (was strictly below). This is the minimal fix for the reported profile. Whether "I just want to use AI more" should cap on its own is a v0.6 judgment item, out of scope.
 6. **The `strong` observation is rewritten, not removed,** so a top result still carries one observation that adds something beyond the band text (the measurement point from Saraev's 2026-10-29 guide). The Ready to build band blurb is unchanged.
 7. **The old dimension-level `low:<dimension>` snippets are removed** once nothing reads them.
 8. **Version bump:** `RUBRIC_VERSION` v0.5 → v0.6, because bands and observations change for some answer sets. Header gains a "What changed in v0.6" block citing this review (2026-10-29) as the source.
-9. **Voice:** user-facing strings follow the em-dash sweep and Evan's plain voice. No em dashes, no superlatives.
+9. **Apostrophes:** new strings use the curly ’ to match the existing snippets.
+10. **Voice:** user-facing strings follow the em-dash sweep and Evan's plain voice. No em dashes, no superlatives.
 
 ## Summary
 
@@ -38,18 +39,18 @@ Fixes four defects in the free AI Readiness Snapshot's result, all confirmed by 
 ## Copy (new user-facing strings, exact)
 
 - `low:uc1`: "A person checking every answer is a sound setup, but the check is where the time goes. Before automating, time how long a review takes: if checking is nearly as slow as doing the work, the gain is small."
-- `low:uc2`: "This isn't yet one specific task that comes up often. The teams that get value name a single job that costs real hours every week and point AI at exactly that. Pick your most repetitive time-sink and start there."
-- `low:uc3`: "There's no written, agreed description yet of what a good result looks like. Without one, nobody can tell whether the AI got it right. Writing it down is usually an hour's work, and it comes before building anything."
+- `low:uc2`: "This isn’t yet one specific task that comes up often. The teams that get value name a single job that costs real hours every week and point AI at exactly that. Pick your most repetitive time-sink and start there."
+- `low:uc3`: "There’s no written, agreed description yet of what a good result looks like. Without one, nobody can tell whether the AI got it right. Writing it down is usually an hour’s work, and it comes before building anything."
 - `low:uc4`: "This task is missing a named owner, a business number it would move, or both. Without them a pilot drifts: nobody is accountable for it and nobody can show it paid off. Settle both before you start."
-- `low:tc1`: "Most of your team isn't using AI for real work yet. A short, practical session to get a few more people productive will move you further than any strategy document."
-- `low:tc2`: "Your team doesn't always catch it when AI gets something wrong. That's the skill that makes everything else safe, and it can be taught: practice at checking AI output pays off before any automation does."
-- `low:tc3`: "Leadership doesn't yet have a clear line on what AI shouldn't be trusted with. Drawing that line is quick, and it's what lets people use AI with confidence everywhere else."
-- `low:pc1`: "If the person doing your most repetitive job were away, the work would depend on asking around rather than on a written process. An AI can only follow what's written down, so documenting that job comes first, and it's worth doing whether or not you automate it."
-- `low:pc2`: "The rules behind your recurring decisions aren't fully written down and current. Those rules are what an AI needs to act on your behalf. Capturing them is cheap, and it protects the business whether or not you automate."
+- `low:tc1`: "Most of your team isn’t using AI for real work yet. A short, practical session to get a few more people productive will move you further than any strategy document."
+- `low:tc2`: "Your team doesn’t always catch it when AI gets something wrong. That’s the skill that makes everything else safe, and it can be taught: practice at checking AI output pays off before any automation does."
+- `low:tc3`: "Leadership doesn’t yet have a clear line on what AI shouldn’t be trusted with. Drawing that line is quick, and it’s what lets people use AI with confidence everywhere else."
+- `low:pc1`: "If the person doing your most repetitive job were away, the work would depend on asking around rather than on a written process. An AI can only follow what’s written down, so documenting that job comes first, and it’s worth doing whether or not you automate it."
+- `low:pc2`: "The rules behind your recurring decisions aren’t fully written down and current. Those rules are what an AI needs to act on your behalf. Capturing them is cheap, and it protects the business whether or not you automate."
 - `low:df1`: "Your records of this happening are patchy or short. A model learns from past examples, so a few months of clean, consistent records will do more for you right now than any model."
-- `low:df2`: "Your data isn't in one central place yet. Models need it accessible and consistent, so pulling the data this task depends on into one place is the step to take before building on top of it."
-- `low:ti1`: "Moving data between your systems still involves some manual steps. That's a solvable plumbing problem, and worth solving before you automate on top of it."
-- `low:gr1`: "A wrong answer here costs you something, even if it's only rework. Keep a person checking the output until you've seen how often the AI gets your own work wrong."
+- `low:df2`: "Your data isn’t in one central place yet. Models need it accessible and consistent, so pulling the data this task depends on into one place is the step to take before building on top of it."
+- `low:ti1`: "Moving data between your systems still involves some manual steps. That’s a solvable plumbing problem, and worth solving before you automate on top of it."
+- `low:gr1`: "A wrong answer here costs you something, even if it’s only rework. Keep a person checking the output until you’ve seen how often the AI gets your own work wrong."
 - `low:gr2`: "Sensitive or confidential data is involved, and keeping it inside controlled tools is the right setup. The next step is a written rule on what may go where, so that stays true as more people start using AI."
 - `strong` (replaces the old text): "Before anything gets built, agree the one number this should move and record where it stands today. Then the result is visible when it lands, not a matter of opinion."
 
